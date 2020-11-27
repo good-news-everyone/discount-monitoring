@@ -1,0 +1,34 @@
+build:
+  weights:
+    comments: 0   # missing comments should not fail the build
+
+comments:
+  EndOfSentenceFormat:
+    active: false
+  CommentOverPrivateFunction:
+    active: false
+
+complexity:
+  LongParameterList:
+    threshold: 5
+    active: true
+  TooManyFunctions:
+    thresholdInInterfaces: 5
+    thresholdInClasses: 10
+    thresholdInFiles: 15
+  ComplexInterface:
+    threshold: 5
+
+naming:
+  FunctionMaxLength:
+    maximumFunctionNameLength: 35
+
+style:
+  MagicNumber:
+    ignoreEnums: true
+  MaxLineLength:
+    maxLineLength: 200
+  ReturnCount:
+    active: false
+  WildcardImport:
+    active: true

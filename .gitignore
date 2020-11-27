@@ -1,0 +1,13 @@
+### Gradle ###
+.gradle
+build/
+### Idea ###
+.idea
+*.iws
+*.iml
+*.ipr
+detekt-report.html
+out/
+
+.DS_Store
+**/charts/*.tgz

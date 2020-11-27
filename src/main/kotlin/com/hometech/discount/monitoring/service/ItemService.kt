@@ -1,0 +1,39 @@
+package com.hometech.discount.monitoring.service
+
+import com.hometech.discount.monitoring.domain.entity.BotUser
+import com.hometech.discount.monitoring.domain.entity.Item
+import com.hometech.discount.monitoring.domain.entity.ItemSubscriber
+import com.hometech.discount.monitoring.domain.repository.ItemRepository
+import com.hometech.discount.monitoring.domain.repository.ItemSubscribersRepository
+import com.hometech.discount.monitoring.domain.repository.UserRepository
+import org.springframework.stereotype.Service
+
+@Service
+class ItemService(
+    private val checkDiscountService: CheckDiscountService,
+    private val itemRepository: ItemRepository,
+    private val userRepository: UserRepository,
+    private val itemSubscriberRepository: ItemSubscribersRepository
+) {
+
+    fun createItem(url: String, user: BotUser): Item {
+        userRepository.save(user)
+        val item = if (itemRepository.existsByUrl(url)) {
+            itemRepository.findOneByUrl(url)
+        } else {
+            val itemInfo = checkDiscountService.parseItemInfo(url)
+            itemRepository.save(itemInfo.toEntity())
+        }
+        createSubscription(user, item)
+        return item
+    }
+
+    fun createSubscription(user: BotUser, item: Item) {
+        itemSubscriberRepository.save(
+            ItemSubscriber(
+                itemId = requireNotNull(item.id),
+                userId = user.id.toLong()
+            )
+        )
+    }
+}

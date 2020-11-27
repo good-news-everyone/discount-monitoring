@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: discount-monitoring
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${JDBC_URL:jdbc:postgresql://localhost:5432/discount_monitoring}
+    username: ${JDBC_USERNAME:postgres}
+    password: ${JDBC_PASSWORD:root}
+    hikari:
+      maximum-pool-size: ${MAXIMUM_POOL_SIZE:5}
+      jdbc-url: ${spring.datasource.url}
+  jpa:
+    hibernate:
+      naming:
+        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
+        physical-strategy: org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    validate-on-migrate: true
+app:
+  bot:
+    name: ${BOT_NAME}
+    token: ${BOT_TOKEN}
