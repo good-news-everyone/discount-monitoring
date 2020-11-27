@@ -11,10 +11,10 @@ class BotUser(
     @Id
     val id: Int,
     val chatId: Long,
-    val firstName: String,
+    val firstName: String?,
     val isBot: Boolean,
-    val lastName: String,
-    val userName: String
+    val lastName: String?,
+    val userName: String?
 )
 
 fun Message.getUser(): BotUser {
