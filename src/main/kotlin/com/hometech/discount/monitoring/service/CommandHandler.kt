@@ -1,7 +1,6 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.domain.entity.Item
-import com.hometech.discount.monitoring.domain.entity.getUser
 import com.hometech.discount.monitoring.parser.ParserType
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.stereotype.Component

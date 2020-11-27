@@ -15,7 +15,7 @@ interface ItemSubscribersRepository : JpaRepository<ItemSubscriber, Long> {
     @Query("select count(i_s) from ItemSubscriber i_s where i_s.itemId = (select i.id from Item i where i.url = :url) and i_s.userId = :userId")
     fun countSubscriptionsByUrlAndUserId(@Param("url") url: String, @Param("userId") userId: Long): Int
 
-    @Query(value = "delete from ItemSubscriber i_s where i_s.itemId = (select i.id from Item i where i.url = :url) and i_s.userId = :userId",)
+    @Query(value = "delete from ItemSubscriber i_s where i_s.itemId = (select i.id from Item i where i.url = :url) and i_s.userId = :userId")
     @Modifying
     fun removeSubscriptionByUrlAndUserId(@Param("url") url: String, @Param("userId") userId: Long)
 
