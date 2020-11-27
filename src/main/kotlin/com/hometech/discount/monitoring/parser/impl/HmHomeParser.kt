@@ -1,7 +1,7 @@
 package com.hometech.discount.monitoring.parser.impl
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.hometech.discount.monitoring.parser.ItemInfo
+import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.parser.getTitle

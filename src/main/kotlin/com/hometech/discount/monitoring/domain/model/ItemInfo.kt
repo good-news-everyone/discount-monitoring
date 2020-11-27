@@ -1,0 +1,14 @@
+package com.hometech.discount.monitoring.domain.model
+
+import com.hometech.discount.monitoring.domain.entity.Item
+import java.math.BigDecimal
+
+data class ItemInfo(
+    val url: String,
+    val name: String,
+    val price: BigDecimal
+) {
+    fun toEntity(): Item {
+        return Item(url, name, price)
+    }
+}

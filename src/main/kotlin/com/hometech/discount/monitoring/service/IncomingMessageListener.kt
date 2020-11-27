@@ -8,7 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 
 @Component
-class BotImpl(
+class IncomingMessageListener(
     val applicationProperties: ApplicationProperties,
     val itemService: ItemService
 ) : TelegramLongPollingBot() {

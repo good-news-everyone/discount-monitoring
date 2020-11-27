@@ -4,9 +4,10 @@ import com.hometech.discount.monitoring.configuration.ParserResolver
 import com.hometech.discount.monitoring.domain.entity.Item
 import com.hometech.discount.monitoring.domain.entity.PriceChange
 import com.hometech.discount.monitoring.domain.entity.PriceLog
+import com.hometech.discount.monitoring.domain.model.ItemInfo
+import com.hometech.discount.monitoring.domain.model.ItemPriceWrapper
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.PriceLogRepository
-import com.hometech.discount.monitoring.parser.ItemInfo
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 
@@ -21,7 +22,7 @@ class CheckDiscountService(
         return parserResolver.findByUrl(url).getItemInfo(url)
     }
 
-    @Scheduled(cron = "0 * * * * *") // раз в час обновляем цены
+    @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем цены
     fun recheckAllPrices() {
         val recheckedItems = itemRepository.findAll().map {
             val priceLog = try {
@@ -53,6 +54,4 @@ class CheckDiscountService(
             priceNow = newPrice
         )
     }
-
-    data class ItemPriceWrapper(val item: Item, val priceChange: PriceLog?)
 }
