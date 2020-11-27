@@ -6,7 +6,8 @@ enum class ParserType(val baseUrl: String) {
     HM_HOME("www2.hm.com");
 
     companion object {
-        private val associatedByUrl = ParserType.values().associateBy { it.baseUrl }
+        val allShops = values().map { it.baseUrl }
+        private val associatedByUrl = values().associateBy { it.baseUrl }
 
         fun findByUrl(url: String): ParserType {
             val baseUrl = URI.create(url).host

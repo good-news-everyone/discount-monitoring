@@ -6,7 +6,9 @@ import com.hometech.discount.monitoring.domain.entity.ItemSubscriber
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.ItemSubscribersRepository
 import com.hometech.discount.monitoring.domain.repository.UserRepository
+import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.stereotype.Service
+import javax.transaction.Transactional
 
 @Service
 class ItemService(
@@ -29,11 +31,31 @@ class ItemService(
     }
 
     fun createSubscription(user: BotUser, item: Item) {
-        itemSubscriberRepository.save(
+        val subscriptionExists = itemSubscriberRepository.existsByItemIdAndUserId(
+            requireNotNull(item.id),
+            user.id.toLong()
+        )
+        if (subscriptionExists.not()) itemSubscriberRepository.save(
             ItemSubscriber(
                 itemId = requireNotNull(item.id),
                 userId = user.id.toLong()
             )
         )
+    }
+
+    fun findItemsByUser(userId: Int): List<Item> = itemRepository.findItemsByUserId(userId.toLong())
+
+    @Transactional
+    fun removeSubscriptionByUrl(url: String, userId: Int) {
+        if (itemSubscriberRepository.countSubscriptionsByUrlAndUserId(url, userId.toLong()) != 0) {
+            itemSubscriberRepository.removeSubscriptionByUrlAndUserId(url, userId.toLong())
+        } else {
+            throw EmptyResultDataAccessException(1)
+        }
+    }
+
+    @Transactional
+    fun clearSubscriptions(userId: Int) {
+        itemSubscriberRepository.clearUserSubscriptions(userId.toLong())
     }
 }
