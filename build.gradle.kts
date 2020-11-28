@@ -5,7 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.0.10.RELEASE"
     id("io.gitlab.arturbosch.detekt") version "1.10.0"
     id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
-    id("com.google.cloud.tools.jib") version "2.4.0"
+    id("com.google.cloud.tools.jib") version "2.6.0"
     id("com.gorylenko.gradle-git-properties") version "2.2.2"
 
     val kotlinVersion = "1.4.10"
