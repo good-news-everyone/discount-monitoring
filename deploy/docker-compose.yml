@@ -1,0 +1,27 @@
+version: '3'
+services:
+  discount-app:
+    image: discount-monitoring-robot:0.0.1
+    container_name: discount-app
+    environment:
+      - JDBC_URL=jdbc:postgresql://postgresql:5432/discount_monitoring
+      - JDBC_USERNAME=postgres
+      - JDBC_PASSWORD=${POSTGRES_PASSWORD}
+      - BOT_NAME=${BOT_NAME}
+      - BOT_TOKEN=${BOT_TOKEN}
+  postgresql:
+    image: postgres:11
+    container_name: postgresql
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    command: postgres -c config_file=/etc/postgresql/config/postgresql.conf
+    volumes:
+      - ./pg-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./postgres-data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+      - /usr/share/zoneinfo/Europe/Moscow:/etc/timezone:ro
+    environment:
+      - POSTGRES_DB=discount_monitoring
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
