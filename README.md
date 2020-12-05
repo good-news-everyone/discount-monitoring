@@ -1,5 +1,23 @@
 # discount-monitoring
 
+## Description
+
+The purpose of this application is the discount monitoring. There is very simply idea:
+You give the application link to the item, you want to by, application monitors price changes and when price go up or
+down, application will send you notification through Telegram BOT API.
+
+## Building application
+
+You can build application with one simple command:
+
 ```
-sudo docker run --name postgresql -it postgres:11 --env POSTGRES_DB=discount_monitoring --env POSTGRES_USER=postgres --env POSTGRES_PASSWORD=test_me! -v /home/leha/postgres-data:/var/lib/postgresql/data -p 5432:5432 --network=local-deploy
+gradle build ktlintFormat
+```
+
+## Deployment
+
+We use Docker container for deployment. To build a container, you can execute another one simple command:
+
+```
+gradle jibDockerBuild --image=<MY IMAGE>
 ```
