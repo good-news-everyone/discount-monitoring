@@ -16,6 +16,7 @@ import javax.persistence.Table
 class Item(
     val url: String,
     val name: String,
+    val priceCurrency: String,
     price: BigDecimal
 ) {
     @Id

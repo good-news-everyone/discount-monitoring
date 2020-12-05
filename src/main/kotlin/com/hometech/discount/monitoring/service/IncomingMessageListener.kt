@@ -2,6 +2,7 @@ package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.entity.getUser
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
@@ -9,6 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 
 @Component
+@Profile("production")
 class IncomingMessageListener(
     private val applicationProperties: ApplicationProperties,
     private val itemService: ItemService,

@@ -52,10 +52,12 @@ class ItemService(
         } else {
             throw EmptyResultDataAccessException(1)
         }
+        itemRepository.deleteItemsWithoutSubscriptions()
     }
 
     @Transactional
     fun clearSubscriptions(userId: Int) {
         itemSubscriberRepository.clearUserSubscriptions(userId.toLong())
+        itemRepository.deleteItemsWithoutSubscriptions()
     }
 }

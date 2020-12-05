@@ -49,8 +49,8 @@ class NotifyService(
 
     private fun buildMessage(wrapper: ItemPriceWrapper): String {
         return """Цена ${wrapper.priceChange!!.priceChange.literal} на ${calculatePercentage(wrapper.priceChange.priceNow, wrapper.priceChange.priceBefore)}%!
-              |Было - ${wrapper.priceChange.priceBefore.setScale(2, RoundingMode.HALF_UP)}
-              |Стало - ${wrapper.priceChange.priceNow.setScale(2, RoundingMode.HALF_UP)}
+              |Было - ${wrapper.priceChange.priceBefore.setScale(2, RoundingMode.HALF_UP)} ${wrapper.item.priceCurrency}
+              |Стало - ${wrapper.priceChange.priceNow.setScale(2, RoundingMode.HALF_UP)} ${wrapper.item.priceCurrency}
               |${wrapper.item.url}""".trimMargin()
     }
 

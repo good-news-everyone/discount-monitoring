@@ -27,7 +27,7 @@ style:
   MagicNumber:
     ignoreEnums: true
   MaxLineLength:
-    maxLineLength: 200
+    maxLineLength: 300
   ReturnCount:
     active: false
   WildcardImport:
