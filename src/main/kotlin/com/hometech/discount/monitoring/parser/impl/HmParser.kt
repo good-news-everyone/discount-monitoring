@@ -2,10 +2,11 @@ package com.hometech.discount.monitoring.parser.impl
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.hometech.discount.monitoring.domain.model.ItemInfo
+import com.hometech.discount.monitoring.parser.Offer
 import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
-import com.hometech.discount.monitoring.parser.getTitle
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
 
@@ -15,34 +16,33 @@ class HmParser(private val objectMapper: ObjectMapper) : Parser {
     override fun getType(): ParserType = ParserType.HM_HOME
 
     override fun getItemInfo(url: String): ItemInfo {
-        val doc = Jsoup.connect(url).get()
-        val offers = doc.getElementById("product-schema")?.data().toOffers()
+        val productInfo = Jsoup.connect(url)
+            .get()
+            .toProductInfo()
         return ItemInfo(
             url = url,
-            price = offers.readPrice(),
-            priceCurrency = offers.readCurrency(),
-            name = doc.getTitle()
+            price = productInfo.offer.price,
+            priceCurrency = productInfo.offer.priceCurrency,
+            name = productInfo.name
         )
     }
 
     override fun parsePrice(url: String): BigDecimal {
-        val response = Jsoup.connect(url).get()
-        return response.getElementById("product-schema")?.data().toOffers().readPrice()
+        return Jsoup.connect(url)
+            .get()
+            .toProductInfo()
+            .offer
+            .price
     }
 
-    private fun String?.toOffers(): List<Map<String, Any?>> {
-        return objectMapper.readValue(this, Map::class.java)["offers"] as List<Map<String, Any?>>
+    private fun Document?.toProductInfo(): Product {
+        if (this == null) throw RuntimeException("Empty result")
+        val data = this.getElementById("product-schema")?.data()
+        requireNotNull(data)
+        return objectMapper.readValue(data, Product::class.java)
     }
 
-    private fun List<Map<String, Any?>>.readPrice(): BigDecimal {
-        val price = this.firstOrNull()?.get("price") as String?
-        if (price.isNullOrEmpty()) throw RuntimeException("Price not found")
-        return BigDecimal(price)
-    }
-
-    private fun List<Map<String, Any?>>.readCurrency(): String {
-        val currency = this.firstOrNull()?.get("priceCurrency") as String?
-        if (currency.isNullOrEmpty()) throw RuntimeException("Price currency not found")
-        return currency
+    private class Product(val name: String, offers: List<Offer>) {
+        val offer: Offer = offers.first()
     }
 }

@@ -1,11 +1,7 @@
 package com.hometech.discount.monitoring.parser
 
-import org.jsoup.nodes.Document
-import java.net.URI
+import com.fasterxml.jackson.annotation.JsonProperty
+import java.math.BigDecimal
 
-fun Document.getTitle(): String = requireNotNull(this.title())
-
-fun Document.getHost(): String {
-    val uri = URI.create(this.baseUri())
-    return uri.host
-}
+class Product(val name: String, @JsonProperty("offers") val offer: Offer)
+class Offer(val price: BigDecimal, val priceCurrency: String)

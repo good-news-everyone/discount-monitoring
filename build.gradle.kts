@@ -53,6 +53,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
+    implementation("io.github.microutils:kotlin-logging:1.6.24")
     implementation("org.telegram:telegrambots-spring-boot-starter:5.0.1")
     implementation("org.jsoup:jsoup:1.13.1")
 

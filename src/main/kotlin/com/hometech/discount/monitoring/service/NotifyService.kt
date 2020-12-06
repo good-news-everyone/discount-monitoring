@@ -1,6 +1,7 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
+import com.hometech.discount.monitoring.domain.entity.BotUser
 import com.hometech.discount.monitoring.domain.entity.PriceChange
 import com.hometech.discount.monitoring.domain.model.ItemPriceWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
@@ -28,23 +29,38 @@ class NotifyService(
     fun notifyUsers(notifyingItems: List<ItemPriceWrapper>) {
         notifyingItems
             .filter { it.priceChange != null && it.priceChange.priceChange != PriceChange.NONE }
-            .forEach {
-                val user = userRepository.findAllUsersSubscribedOnItem(
-                    requireNotNull(it.item.id)
+            .forEach { wrapper ->
+                val users = userRepository.findAllUsersSubscribedOnItem(
+                    requireNotNull(wrapper.item.id)
                 )
-                val request = HttpEntity<MultiValueMap<String, String>>(
-                    MessageBody(user.chatId, buildMessage(it)).toMultivaluedMap(),
-                    HttpHeaders().apply {
-                        this.contentType = MediaType.APPLICATION_FORM_URLENCODED
-                    }
-                )
-                restTemplate.exchange(
-                    uri,
-                    HttpMethod.POST,
-                    request,
-                    String::class.java
-                )
+                users.forEach {
+                    sendMessage(it, buildMessage(wrapper))
+                }
             }
+    }
+
+    fun sendMessageToAllUsers(message: String) {
+        userRepository.findAll().forEach { sendMessage(it, message) }
+    }
+
+    fun sendMessageToUser(userId: Int, message: String) {
+        val user = userRepository.findById(userId).orElseThrow { NoSuchElementException("User with id = $userId not found") }
+        sendMessage(user, message)
+    }
+
+    private fun sendMessage(user: BotUser, message: String) {
+        val request = HttpEntity<MultiValueMap<String, String>>(
+            MessageBody(user.chatId, message).toMultivaluedMap(),
+            HttpHeaders().apply {
+                this.contentType = MediaType.APPLICATION_FORM_URLENCODED
+            }
+        )
+        restTemplate.exchange(
+            uri,
+            HttpMethod.POST,
+            request,
+            String::class.java
+        )
     }
 
     private fun buildMessage(wrapper: ItemPriceWrapper): String {

@@ -8,6 +8,7 @@ import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.ItemPriceWrapper
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.PriceLogRepository
+import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 
@@ -18,6 +19,9 @@ class CheckDiscountService(
     private val logRepository: PriceLogRepository,
     private val notifyService: NotifyService
 ) {
+
+    private val logger = KotlinLogging.logger {}
+
     fun parseItemInfo(url: String): ItemInfo {
         return parserResolver.findByUrl(url).getItemInfo(url)
     }
@@ -28,6 +32,7 @@ class CheckDiscountService(
             val priceLog = try {
                 recheckPrice(it)
             } catch (e: RuntimeException) {
+                logger.error { e }
                 null
             }
             val newPrice = priceLog?.priceNow ?: return@map ItemPriceWrapper(it, null)
