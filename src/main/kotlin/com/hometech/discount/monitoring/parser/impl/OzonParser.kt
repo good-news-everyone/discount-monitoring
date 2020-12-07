@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Component
 class OzonParser(private val objectMapper: ObjectMapper) : Parser {
 
-    val cookies: MutableMap<String, String> = ConcurrentHashMap()
+    val cookies: MutableMap<String, String> = ConcurrentHashMap(initialCookies)
 
     override fun getType(): ParserType = ParserType.OZON
 
@@ -46,5 +46,17 @@ class OzonParser(private val objectMapper: ObjectMapper) : Parser {
             ?.data()
         return objectMapper
             .readValue(infoArray, Product::class.java)
+    }
+
+    companion object {
+        private val initialCookies = mapOf(
+            Pair("__Secure-ab-group", "28"),
+            Pair("__Secure-session-id", "mbFm/xWwSq2PD6WTl9xeMg"),
+            Pair("__Secure-ext_xcid", "e10248f31d1c03770e86759a88685ed6"),
+            Pair("__Secure-user-id", "50085194"),
+            Pair("__Secure-access-token", "3.0.mbFm/xWwSq2PD6WTl9xeMg.28.l8cMBQAAAABfzdWBAC1MKKN3ZWKgAICQoA..20201207091057.vMwvL1Z0ezIOrtOlMv5IqSywaGmg6OmhJUrpqyhMyDA"),
+            Pair("__Secure-refresh-token", "3.0.mbFm/xWwSq2PD6WTl9xeMg.28.l8cMBQAAAABfzdWBAC1MKKN3ZWKgAICQoA..20201207091057.NRlV_IVsvPugrgy7DZ1xQRemucHgrLFdvhUDfNJ81p0"),
+            Pair("__Secure-token-expiration", "2020-12-07T11:23:03.9426131+03:00")
+        )
     }
 }
