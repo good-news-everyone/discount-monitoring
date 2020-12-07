@@ -9,7 +9,6 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
-import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
@@ -20,7 +19,6 @@ class OzonParser(private val objectMapper: ObjectMapper) : Parser {
     override fun getType(): ParserType = ParserType.OZON
 
     override fun getItemInfo(url: String): ItemInfo {
-        checkCookies()
         val response = Jsoup.connect(url)
             .cookies(cookies)
             .execute()
@@ -34,7 +32,13 @@ class OzonParser(private val objectMapper: ObjectMapper) : Parser {
         )
     }
 
-    override fun parsePrice(url: String): BigDecimal = Jsoup.connect(url).get().info().offer.price
+    override fun parsePrice(url: String): BigDecimal {
+        val response = Jsoup.connect(url)
+            .cookies(cookies)
+            .execute()
+        cookies.putAll(response.cookies())
+        return response.parse().info().offer.price
+    }
 
     private fun Document.info(): Product {
         val infoArray = this.getElementsByAttributeValue("type", "application/ld+json")
@@ -42,11 +46,5 @@ class OzonParser(private val objectMapper: ObjectMapper) : Parser {
             ?.data()
         return objectMapper
             .readValue(infoArray, Product::class.java)
-    }
-
-    private fun checkCookies() {
-        if (cookies.isEmpty()) return
-        val tokenExpiration = Instant.parse(cookies["token-expiration"])
-        if (tokenExpiration.isBefore(Instant.now())) cookies.clear()
     }
 }

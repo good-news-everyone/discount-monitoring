@@ -8,6 +8,11 @@ import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.ItemPriceWrapper
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.PriceLogRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -28,18 +33,20 @@ class CheckDiscountService(
 
     @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем цены
     fun recheckAllPrices() {
-        val recheckedItems = itemRepository.findAll().map {
-            val priceLog = try {
-                recheckPrice(it)
-            } catch (e: RuntimeException) {
-                logger.error { e }
-                null
+        val recheckedItems = runBlocking(Dispatchers.Default) {
+            itemRepository.findAll().parallelMap {
+                val priceLog = try {
+                    recheckPrice(it)
+                } catch (e: Exception) {
+                    logger.error { e }
+                    null
+                }
+                val newPrice = priceLog?.priceNow ?: return@parallelMap ItemPriceWrapper(it, null)
+                if (newPrice != it.currentPrice) {
+                    it.setNewPrice(newPrice)
+                }
+                ItemPriceWrapper(it, priceLog)
             }
-            val newPrice = priceLog?.priceNow ?: return@map ItemPriceWrapper(it, null)
-            if (newPrice != it.currentPrice) {
-                it.setNewPrice(newPrice)
-            }
-            ItemPriceWrapper(it, priceLog)
         }
         logRepository.saveAll(
             recheckedItems.mapNotNull { it.priceChange }
@@ -58,5 +65,9 @@ class CheckDiscountService(
             priceBefore = item.currentPrice,
             priceNow = newPrice
         )
+    }
+
+    suspend fun <A, B> Iterable<A>.parallelMap(f: suspend (A) -> B): List<B> = coroutineScope {
+        map { async { f(it) } }.awaitAll()
     }
 }

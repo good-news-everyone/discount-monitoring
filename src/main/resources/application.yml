@@ -19,6 +19,10 @@ spring:
     enabled: true
     baseline-on-migrate: true
     validate-on-migrate: true
+logging:
+  level:
+    com.hometech: ${LOG_LEVEL:trace}
+  register-shutdown-hook: true
 app:
   bot:
     name: ${BOT_NAME}

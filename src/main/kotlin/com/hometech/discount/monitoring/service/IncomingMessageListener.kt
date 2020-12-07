@@ -2,6 +2,7 @@ package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.entity.getUser
+import mu.KotlinLogging
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
@@ -17,6 +18,7 @@ class IncomingMessageListener(
     private val commandHandler: CommandHandler
 ) : TelegramLongPollingBot() {
 
+    private val logger = KotlinLogging.logger { }
     private val regex = Regex("^(https?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]$")
 
     override fun getBotToken(): String = applicationProperties.bot.token
@@ -36,8 +38,10 @@ class IncomingMessageListener(
         try {
             itemService.createItem(update.message.text, update.message.getUser())
             reply(chatId, "Запрос принят! Мы оповестим о изменении цены.")
-        } catch (e: RuntimeException) {
-            reply(chatId, "Что то пошло не так :(")
+        } catch (e: Exception) {
+            logger.error {
+                reply(chatId, "Что то пошло не так :(")
+            }
         }
     }
 

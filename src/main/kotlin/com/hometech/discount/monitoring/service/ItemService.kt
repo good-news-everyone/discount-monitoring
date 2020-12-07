@@ -6,6 +6,7 @@ import com.hometech.discount.monitoring.domain.entity.ItemSubscriber
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.ItemSubscribersRepository
 import com.hometech.discount.monitoring.domain.repository.UserRepository
+import mu.KotlinLogging
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.stereotype.Service
 import javax.transaction.Transactional
@@ -18,12 +19,17 @@ class ItemService(
     private val itemSubscriberRepository: ItemSubscribersRepository
 ) {
 
+    private val logger = KotlinLogging.logger { }
+
     fun createItem(url: String, user: BotUser): Item {
         userRepository.save(user)
+        logger.trace { "user request subscription for item $url" }
         val item = if (itemRepository.existsByUrl(url)) {
+            logger.trace { "item already exists, creating subscription" }
             itemRepository.findOneByUrl(url)
         } else {
             val itemInfo = checkDiscountService.parseItemInfo(url)
+            logger.trace { "item not exists, creating creating new item" }
             itemRepository.save(itemInfo.toEntity())
         }
         createSubscription(user, item)
