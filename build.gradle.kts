@@ -56,11 +56,16 @@ dependencies {
     implementation("io.github.microutils:kotlin-logging:1.6.24")
     implementation("org.telegram:telegrambots-spring-boot-starter:5.0.1")
     implementation("org.jsoup:jsoup:1.13.1")
+    implementation("com.vladmihalcea:hibernate-types-52:2.10.2")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+
     runtimeOnly("org.postgresql:postgresql")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("io.projectreactor:reactor-test")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
+    }
+    testImplementation("io.kotest:kotest-runner-junit5-jvm:4.3.2")
 }
 
 tasks.withType<Test> {

@@ -1,11 +1,13 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ParserResolver
+import com.hometech.discount.monitoring.domain.entity.AdditionalInfoLog
 import com.hometech.discount.monitoring.domain.entity.Item
-import com.hometech.discount.monitoring.domain.entity.PriceChange
 import com.hometech.discount.monitoring.domain.entity.PriceLog
+import com.hometech.discount.monitoring.domain.model.ChangeWrapper
+import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.ItemInfo
-import com.hometech.discount.monitoring.domain.model.ItemPriceWrapper
+import com.hometech.discount.monitoring.domain.repository.AdditionalInfoLogRepository
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.PriceLogRepository
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +23,8 @@ import org.springframework.stereotype.Service
 class CheckDiscountService(
     private val parserResolver: ParserResolver,
     private val itemRepository: ItemRepository,
-    private val logRepository: PriceLogRepository,
+    private val priceLogRepository: PriceLogRepository,
+    private val additionalInfoLogRepository: AdditionalInfoLogRepository,
     private val notifyService: NotifyService
 ) {
 
@@ -31,39 +34,54 @@ class CheckDiscountService(
         return parserResolver.findByUrl(url).getItemInfo(url)
     }
 
-    @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем цены
+    @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем информацию о товарах
     fun recheckAllPrices() {
         val recheckedItems = runBlocking(Dispatchers.Default) {
             itemRepository.findAll().parallelMap {
-                val priceLog = try {
+                val changeWrapper = try {
                     recheckPrice(it)
                 } catch (e: Exception) {
                     logger.error { e }
                     null
+                } ?: return@parallelMap ItemChangeWrapper(it, null)
+                if (changeWrapper.priceLog.priceNow != it.currentPrice) {
+                    it.setNewPrice(changeWrapper.priceLog.priceNow)
                 }
-                val newPrice = priceLog?.priceNow ?: return@parallelMap ItemPriceWrapper(it, null)
-                if (newPrice != it.currentPrice) {
-                    it.setNewPrice(newPrice)
+                if (changeWrapper.additionalInfoLog.infoNow != it.additionalInfo) {
+                    it.additionalInfo = changeWrapper.additionalInfoLog.infoNow
                 }
-                ItemPriceWrapper(it, priceLog)
+                ItemChangeWrapper(it, changeWrapper)
             }
         }
-        logRepository.saveAll(
-            recheckedItems.mapNotNull { it.priceChange }
+        val logsToSave = recheckedItems.mapNotNull { it.itemChange }
+        priceLogRepository.saveAll(
+            logsToSave.map { it.priceLog }
+        )
+        additionalInfoLogRepository.saveAll(
+            logsToSave.map { it.additionalInfoLog }
         )
         itemRepository.saveAll(
-            recheckedItems.filter { it.priceChange?.priceChange != PriceChange.NONE }.map { it.item }
+            recheckedItems.filter { it.isItemChanged() }.map { it.item }
         )
         notifyService.notifyUsers(recheckedItems)
     }
 
-    fun recheckPrice(item: Item): PriceLog {
+    private fun recheckPrice(item: Item): ChangeWrapper {
         val url = item.url
-        val newPrice = parserResolver.findByUrl(url).parsePrice(url)
-        return PriceLog(
+        val itemInfo = parserResolver.findByUrl(url).getItemInfo(url)
+        val priceLog = PriceLog(
             itemId = requireNotNull(item.id),
             priceBefore = item.currentPrice,
-            priceNow = newPrice
+            priceNow = itemInfo.price
+        )
+        val infoLog = AdditionalInfoLog(
+            itemId = requireNotNull(item.id),
+            infoBefore = item.additionalInfo,
+            infoNow = itemInfo.additionalInfo
+        )
+        return ChangeWrapper(
+            priceLog = priceLog,
+            additionalInfoLog = infoLog
         )
     }
 

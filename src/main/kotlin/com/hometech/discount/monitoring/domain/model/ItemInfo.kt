@@ -7,7 +7,8 @@ data class ItemInfo(
     val url: String,
     val name: String,
     val price: BigDecimal,
-    val priceCurrency: String
+    val priceCurrency: String,
+    val additionalInfo: AdditionalInfo
 ) {
     fun toEntity(): Item {
         return Item(url, name, priceCurrency, price)

@@ -1,9 +1,12 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
+import com.hometech.discount.monitoring.domain.entity.AdditionalInfoLog
 import com.hometech.discount.monitoring.domain.entity.BotUser
+import com.hometech.discount.monitoring.domain.entity.Item
 import com.hometech.discount.monitoring.domain.entity.PriceChange
-import com.hometech.discount.monitoring.domain.model.ItemPriceWrapper
+import com.hometech.discount.monitoring.domain.entity.PriceLog
+import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
 import com.hometech.discount.monitoring.domain.repository.UserRepository
 import org.springframework.http.HttpEntity
@@ -26,9 +29,9 @@ class NotifyService(
 
     private val uri = "https://api.telegram.org/bot${applicationProperties.bot.token}/sendMessage"
 
-    fun notifyUsers(notifyingItems: List<ItemPriceWrapper>) {
+    fun notifyUsers(notifyingItems: List<ItemChangeWrapper>) {
         notifyingItems
-            .filter { it.priceChange != null && it.priceChange.priceChange != PriceChange.NONE }
+            .filter { it.isItemChanged() }
             .forEach { wrapper ->
                 val users = userRepository.findAllUsersSubscribedOnItem(
                     requireNotNull(wrapper.item.id)
@@ -63,11 +66,26 @@ class NotifyService(
         )
     }
 
-    private fun buildMessage(wrapper: ItemPriceWrapper): String {
-        return """Цена ${wrapper.priceChange!!.priceChange.literal} на ${calculatePercentage(wrapper.priceChange.priceNow, wrapper.priceChange.priceBefore)}%!
-              |Было - ${wrapper.priceChange.priceBefore.setScale(2, RoundingMode.HALF_UP)} ${wrapper.item.priceCurrency}
-              |Стало - ${wrapper.priceChange.priceNow.setScale(2, RoundingMode.HALF_UP)} ${wrapper.item.priceCurrency}
-              |${wrapper.item.url}""".trimMargin()
+    private fun buildMessage(wrapper: ItemChangeWrapper): String {
+        return listOf(
+            messageOnPriceChange(wrapper.item, requireNotNull(wrapper.itemChange?.priceLog)),
+            messageOnAdditionalInfoChange(requireNotNull(wrapper.itemChange?.additionalInfoLog)),
+            wrapper.item.url
+
+        ).filter { it.isNotEmpty() }.joinToString(separator = "\n")
+    }
+
+    private fun messageOnPriceChange(item: Item, priceChange: PriceLog): String {
+        if (priceChange.priceChange == PriceChange.NONE) return ""
+        return """Цена ${priceChange.priceChange.literal} на ${calculatePercentage(priceChange.priceNow, priceChange.priceBefore)}%!
+              |Было - ${priceChange.priceBefore.setScale(2, RoundingMode.HALF_UP)} ${item.priceCurrency}
+              |Стало - ${priceChange.priceNow.setScale(2, RoundingMode.HALF_UP)} ${item.priceCurrency}"""
+            .trimMargin()
+    }
+
+    private fun messageOnAdditionalInfoChange(additionalInfoChange: AdditionalInfoLog): String {
+        if (additionalInfoChange.infoBefore == additionalInfoChange.infoNow) return ""
+        return additionalInfoChange.difference()
     }
 
     private fun calculatePercentage(now: BigDecimal, before: BigDecimal): BigDecimal {
