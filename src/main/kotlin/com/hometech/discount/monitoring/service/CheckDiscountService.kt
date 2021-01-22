@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.util.concurrent.TimeUnit
 
 @Service
 class CheckDiscountService(
@@ -35,38 +36,49 @@ class CheckDiscountService(
     }
 
     @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем информацию о товарах
-    fun recheckAllPrices() {
-        val recheckedItems = runBlocking(Dispatchers.Default) {
-            itemRepository.findAll().parallelMap {
-                val changeWrapper = try {
-                    recheckPrice(it)
-                } catch (e: Exception) {
-                    logger.error { e }
-                    null
-                } ?: return@parallelMap ItemChangeWrapper(it, null)
-                if (changeWrapper.priceLog.priceNow != it.currentPrice) {
-                    it.setNewPrice(changeWrapper.priceLog.priceNow)
-                }
-                if (changeWrapper.additionalInfoLog.infoNow != it.additionalInfo) {
-                    it.additionalInfo = changeWrapper.additionalInfoLog.infoNow
-                }
-                ItemChangeWrapper(it, changeWrapper)
-            }
+    fun recheckAllItems() {
+        val recheckedItems = measureExecution {
+            runBlocking(Dispatchers.Default) { recheckAll() }
         }
-        val logsToSave = recheckedItems.mapNotNull { it.itemChange }
-        priceLogRepository.saveAll(
-            logsToSave.map { it.priceLog }
-        )
-        additionalInfoLogRepository.saveAll(
-            logsToSave.map { it.additionalInfoLog }
-        )
-        itemRepository.saveAll(
-            recheckedItems.filter { it.isItemChanged() }.map { it.item }
-        )
+        saveItemsAndLogs(recheckedItems)
         notifyService.notifyUsers(recheckedItems)
     }
 
-    private fun recheckPrice(item: Item): ChangeWrapper {
+    private suspend fun recheckAll(): List<ItemChangeWrapper> {
+        return itemRepository.findAll().parallelMap {
+            val changeWrapper = try {
+                recheckItem(it)
+            } catch (e: Exception) {
+                logger.error { e }
+                null
+            } ?: return@parallelMap ItemChangeWrapper(it, null)
+            if (changeWrapper.priceLog.priceNow != it.currentPrice) {
+                it.setNewPrice(changeWrapper.priceLog.priceNow)
+            }
+            if (changeWrapper.additionalInfoLog.infoNow != it.additionalInfo) {
+                it.additionalInfo = changeWrapper.additionalInfoLog.infoNow
+            }
+            ItemChangeWrapper(it, changeWrapper)
+        }
+    }
+
+    private fun saveItemsAndLogs(recheckedItems: List<ItemChangeWrapper>) {
+        val priceLogs = mutableListOf<PriceLog>()
+        val additionalLogs = mutableListOf<AdditionalInfoLog>()
+        val changedItems = mutableListOf<Item>()
+        recheckedItems.forEach {
+            if (it.itemChange != null) {
+                priceLogs.add(it.itemChange.priceLog)
+                additionalLogs.add(it.itemChange.additionalInfoLog)
+                if (it.isItemChanged()) changedItems.add(it.item)
+            }
+        }
+        priceLogRepository.saveAll(priceLogs)
+        additionalInfoLogRepository.saveAll(additionalLogs)
+        itemRepository.saveAll(changedItems)
+    }
+
+    private fun recheckItem(item: Item): ChangeWrapper {
         val url = item.url
         val itemInfo = parserResolver.findByUrl(url).getItemInfo(url)
         val priceLog = PriceLog(
@@ -87,5 +99,13 @@ class CheckDiscountService(
 
     suspend fun <A, B> Iterable<A>.parallelMap(f: suspend (A) -> B): List<B> = coroutineScope {
         map { async { f(it) } }.awaitAll()
+    }
+
+    private inline fun <T> measureExecution(function: () -> T): T {
+        val startTime = System.nanoTime()
+        return function.invoke().also {
+            val difference = System.nanoTime() - startTime
+            logger.info("Recheck all items took ${TimeUnit.NANOSECONDS.toMillis(difference)}ms")
+        }
     }
 }
