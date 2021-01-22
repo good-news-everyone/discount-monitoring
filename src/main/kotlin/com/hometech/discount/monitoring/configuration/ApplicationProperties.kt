@@ -1,15 +1,17 @@
 package com.hometech.discount.monitoring.configuration
 
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.stereotype.Component
+import org.springframework.boot.context.properties.ConstructorBinding
 
 @ConfigurationProperties(prefix = "app", ignoreUnknownFields = false)
-@Component
-class ApplicationProperties {
-    var bot: BotProperties = BotProperties()
-}
+@ConstructorBinding
+data class ApplicationProperties(
+    val bot: BotProperties = BotProperties(),
+    val threadsCount: Int
+)
 
-class BotProperties(
-    var name: String = "",
-    var token: String = ""
+@ConstructorBinding
+data class BotProperties(
+    val name: String = "",
+    val token: String = ""
 )

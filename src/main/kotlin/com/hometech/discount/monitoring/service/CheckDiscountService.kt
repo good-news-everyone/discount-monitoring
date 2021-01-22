@@ -1,5 +1,6 @@
 package com.hometech.discount.monitoring.service
 
+import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.configuration.ParserResolver
 import com.hometech.discount.monitoring.domain.entity.AdditionalInfoLog
 import com.hometech.discount.monitoring.domain.entity.Item
@@ -28,9 +29,13 @@ class CheckDiscountService(
     private val itemRepository: ItemRepository,
     private val priceLogRepository: PriceLogRepository,
     private val additionalInfoLogRepository: AdditionalInfoLogRepository,
-    private val notifyService: NotifyService
+    private val notifyService: NotifyService,
+    applicationProperties: ApplicationProperties
 ) {
-    private val coroutineDispatcher = newFixedThreadPoolContext(6, name = "Items recheck context")
+    private val coroutineDispatcher = newFixedThreadPoolContext(
+        nThreads = applicationProperties.threadsCount,
+        name = "Items recheck context"
+    )
     private val logger = KotlinLogging.logger {}
 
     fun parseItemInfo(url: String): ItemInfo {
