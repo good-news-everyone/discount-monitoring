@@ -9,6 +9,7 @@ import com.hometech.discount.monitoring.domain.entity.PriceLog
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
 import com.hometech.discount.monitoring.domain.repository.UserRepository
+import mu.KotlinLogging
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -16,6 +17,7 @@ import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.util.MultiValueMap
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.math.BigDecimal
 import java.math.MathContext
@@ -27,7 +29,7 @@ class NotifyService(
     private val userRepository: UserRepository,
     applicationProperties: ApplicationProperties
 ) {
-
+    private val log = KotlinLogging.logger { }
     private val uri = "https://api.telegram.org/bot${applicationProperties.bot.token}/sendMessage"
 
     @Async
@@ -39,7 +41,11 @@ class NotifyService(
                     requireNotNull(wrapper.item.id)
                 )
                 users.forEach {
-                    sendMessage(it, buildMessage(wrapper))
+                    try {
+                        sendMessage(it, buildMessage(wrapper))
+                    } catch (ex: HttpClientErrorException) {
+                        log.error { ex }
+                    }
                 }
             }
     }
