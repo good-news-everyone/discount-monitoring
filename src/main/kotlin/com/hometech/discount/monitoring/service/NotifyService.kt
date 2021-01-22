@@ -13,6 +13,7 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.RestTemplate
@@ -29,6 +30,7 @@ class NotifyService(
 
     private val uri = "https://api.telegram.org/bot${applicationProperties.bot.token}/sendMessage"
 
+    @Async
     fun notifyUsers(notifyingItems: List<ItemChangeWrapper>) {
         notifyingItems
             .filter { it.isItemChanged() }
