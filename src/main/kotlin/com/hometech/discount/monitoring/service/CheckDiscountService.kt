@@ -10,16 +10,18 @@ import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.repository.AdditionalInfoLogRepository
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.PriceLogRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.concurrent.TimeUnit
 
+@ObsoleteCoroutinesApi
 @Service
 class CheckDiscountService(
     private val parserResolver: ParserResolver,
@@ -28,7 +30,7 @@ class CheckDiscountService(
     private val additionalInfoLogRepository: AdditionalInfoLogRepository,
     private val notifyService: NotifyService
 ) {
-
+    private val coroutineDispatcher = newFixedThreadPoolContext(6, name = "Items recheck context")
     private val logger = KotlinLogging.logger {}
 
     fun parseItemInfo(url: String): ItemInfo {
@@ -38,7 +40,7 @@ class CheckDiscountService(
     @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем информацию о товарах
     fun recheckAllItems() {
         val recheckedItems = measureExecution {
-            runBlocking(Dispatchers.IO) { recheckAll() }
+            runBlocking(context = coroutineDispatcher) { recheckAll() }
         }
         saveItemsAndLogs(recheckedItems)
         notifyService.notifyUsers(recheckedItems)

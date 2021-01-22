@@ -8,7 +8,7 @@ plugins {
     id("com.google.cloud.tools.jib") version "2.6.0"
     id("com.gorylenko.gradle-git-properties") version "2.2.2"
 
-    val kotlinVersion = "1.4.10"
+    val kotlinVersion = "1.4.21"
 
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.spring") version kotlinVersion
