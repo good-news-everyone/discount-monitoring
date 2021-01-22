@@ -38,7 +38,7 @@ class CheckDiscountService(
     @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем информацию о товарах
     fun recheckAllItems() {
         val recheckedItems = measureExecution {
-            runBlocking(Dispatchers.Default) { recheckAll() }
+            runBlocking(Dispatchers.IO) { recheckAll() }
         }
         saveItemsAndLogs(recheckedItems)
         notifyService.notifyUsers(recheckedItems)
