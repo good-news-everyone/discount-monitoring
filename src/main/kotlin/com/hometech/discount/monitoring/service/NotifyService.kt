@@ -33,7 +33,7 @@ class NotifyService(
     @Async
     fun notifyUsers(notifyingItems: List<ItemChangeWrapper>) {
         notifyingItems
-            .filter { it.isItemChanged() }
+            .filter { it.itemChange != null && it.isItemChanged() }
             .forEach { wrapper ->
                 val users = userRepository.findAllUsersSubscribedOnItem(
                     requireNotNull(wrapper.item.id)
