@@ -31,13 +31,12 @@ class ZaraParser(private val objectMapper: ObjectMapper) : Parser {
 
     private fun Document?.toProductInfo(): Product {
         if (this == null) throw RuntimeException("Empty result")
-        val infoArray = this.getElementById("product")
-            ?.getElementsByAttributeValue("type", "application/ld+json")
-            ?.firstOrNull()
-            ?.data()
+        val infos = this.getElementsByAttributeValue("type", "application/ld+json")
+            .firstOrNull()
+            ?.data() ?: throw RuntimeException("No info present.")
         return objectMapper
-            .readValue(infoArray, Array<Product>::class.java)
-            .firstOrNull() ?: throw RuntimeException("No info.")
+            .readValue(infos, Array<Product>::class.java)
+            .first()
     }
 
     private fun Document?.sizeInfos(): List<SizeInfo> {

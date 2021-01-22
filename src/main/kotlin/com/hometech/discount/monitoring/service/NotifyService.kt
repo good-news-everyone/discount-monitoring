@@ -71,8 +71,9 @@ class NotifyService(
             messageOnPriceChange(wrapper.item, requireNotNull(wrapper.itemChange?.priceLog)),
             messageOnAdditionalInfoChange(requireNotNull(wrapper.itemChange?.additionalInfoLog)),
             wrapper.item.url
-
-        ).filter { it.isNotEmpty() }.joinToString(separator = "\n")
+        )
+            .filter { it.isNotEmpty() }
+            .joinToString(separator = "\n")
     }
 
     private fun messageOnPriceChange(item: Item, priceChange: PriceLog): String {
