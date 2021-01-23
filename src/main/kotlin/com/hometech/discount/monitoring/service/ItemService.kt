@@ -6,17 +6,22 @@ import com.hometech.discount.monitoring.domain.entity.ItemSubscriber
 import com.hometech.discount.monitoring.domain.repository.ItemRepository
 import com.hometech.discount.monitoring.domain.repository.ItemSubscribersRepository
 import com.hometech.discount.monitoring.domain.repository.UserRepository
+import com.hometech.discount.monitoring.parser.ParserType
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
+import org.jsoup.HttpStatusException
 import org.springframework.dao.EmptyResultDataAccessException
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import javax.transaction.Transactional
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class ItemService(
     private val checkDiscountService: CheckDiscountService,
     private val itemRepository: ItemRepository,
     private val userRepository: UserRepository,
-    private val itemSubscriberRepository: ItemSubscribersRepository
+    private val itemSubscriberRepository: ItemSubscribersRepository,
+    private val notifyService: NotifyService
 ) {
 
     private val logger = KotlinLogging.logger { }
@@ -65,5 +70,29 @@ class ItemService(
     fun clearSubscriptions(userId: Int) {
         itemSubscriberRepository.clearUserSubscriptions(userId.toLong())
         itemRepository.deleteItemsWithoutSubscriptions()
+    }
+
+    @ObsoleteCoroutinesApi
+    @Transactional
+    @Scheduled(cron = "0 0 23 * * *")
+    fun cleanUpItems() {
+        val notAvailableItems = itemRepository.findAllByType(ParserType.ZARA).mapNotNull {
+            try {
+                checkDiscountService.parseItemInfo(it.url)
+                null
+            } catch (ex: HttpStatusException) {
+                if (ex.statusCode == 410) it
+                else null
+            }
+        }
+        notAvailableItems.forEach {
+            logger.warn {
+                "Item ${it.url} not available anymore. Users will be notified and all subscriptions will be deleted."
+            }
+            notifyService.notifyUsersAboutItemDeletion(it)
+        }
+        val itemIds = notAvailableItems.mapNotNull { it.id }
+        itemSubscriberRepository.deleteAllByItemIdIn(itemIds)
+        itemRepository.deleteAll(notAvailableItems)
     }
 }

@@ -16,7 +16,7 @@ class CommandHandler(private val itemService: ItemService) {
             "/help", "/start" -> welcomeMessage
             "/shops" -> allShops()
             "/goods" -> goods(update.userId())
-            "/unsubscribe" -> if (args.size != 2 && args[1].isNullOrEmpty()) BAD_COMMAND else unsubscribe(args[1], update.userId())
+            "/unsubscribe" -> if (args.size != 2 && args[1].isEmpty()) BAD_COMMAND else unsubscribe(args[1], update.userId())
             "/unsubscribe_all" -> unsubscribeAll(update.userId())
             else -> BAD_COMMAND
         }

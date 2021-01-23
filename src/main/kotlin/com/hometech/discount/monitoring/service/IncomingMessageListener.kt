@@ -1,7 +1,9 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
+import com.hometech.discount.monitoring.domain.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.entity.getUser
+import com.hometech.discount.monitoring.domain.repository.MessageRepository
 import mu.KotlinLogging
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
@@ -15,7 +17,8 @@ import org.telegram.telegrambots.meta.api.objects.Update
 class IncomingMessageListener(
     private val applicationProperties: ApplicationProperties,
     private val itemService: ItemService,
-    private val commandHandler: CommandHandler
+    private val commandHandler: CommandHandler,
+    private val messageRepository: MessageRepository
 ) : TelegramLongPollingBot() {
 
     private val logger = KotlinLogging.logger { }
@@ -26,6 +29,7 @@ class IncomingMessageListener(
     override fun getBotUsername(): String = applicationProperties.bot.name
 
     override fun onUpdateReceived(update: Update) {
+        messageRepository.save(update.toMessage())
         when (update.message.messageType()) {
             MessageType.URL -> handleUrl(update)
             MessageType.COMMAND -> handleCommand(update)
@@ -75,6 +79,14 @@ class IncomingMessageListener(
 
     private fun Update.chatId(): String {
         return this.message.chatId.toString()
+    }
+
+    private fun Update.toMessage(): com.hometech.discount.monitoring.domain.entity.Message {
+        return com.hometech.discount.monitoring.domain.entity.Message(
+            message = this.message.text,
+            user = this.message.getUser(),
+            direction = MessageDirection.INBOUND
+        )
     }
 
     enum class MessageType {

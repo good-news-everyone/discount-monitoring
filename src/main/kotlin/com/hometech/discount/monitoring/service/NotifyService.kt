@@ -4,18 +4,25 @@ import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.entity.AdditionalInfoLog
 import com.hometech.discount.monitoring.domain.entity.BotUser
 import com.hometech.discount.monitoring.domain.entity.Item
+import com.hometech.discount.monitoring.domain.entity.Message
+import com.hometech.discount.monitoring.domain.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.entity.PriceChange
 import com.hometech.discount.monitoring.domain.entity.PriceLog
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
+import com.hometech.discount.monitoring.domain.repository.MessageRepository
 import com.hometech.discount.monitoring.domain.repository.UserRepository
+import com.hometech.discount.monitoring.domain.repository.findAll
 import mu.KotlinLogging
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
@@ -27,8 +34,12 @@ import java.math.RoundingMode
 class NotifyService(
     private val restTemplate: RestTemplate,
     private val userRepository: UserRepository,
+    private val messageRepository: MessageRepository,
     applicationProperties: ApplicationProperties
 ) {
+    @Autowired
+    private lateinit var itemService: ItemService
+
     private val log = KotlinLogging.logger { }
     private val uri = "https://api.telegram.org/bot${applicationProperties.bot.token}/sendMessage"
 
@@ -42,21 +53,42 @@ class NotifyService(
                 )
                 users.forEach {
                     try {
-                        sendMessage(it, buildMessage(wrapper))
+                        val messageBody = buildMessage(wrapper)
+                        sendMessage(it, messageBody)
+                        saveMessage(it, messageBody)
                     } catch (ex: HttpClientErrorException) {
                         log.error { ex }
+                        if (ex.statusCode == HttpStatus.FORBIDDEN) setBlockedBy(it)
                     }
                 }
             }
     }
 
+    fun notifyUsersAboutItemDeletion(item: Item) {
+        userRepository.findAllUsersSubscribedOnItem(item.id!!).forEach {
+            val message = """
+                $ITEM_NOT_AVAILABLE_MESSAGE
+                ${item.url}
+            """.trimIndent()
+            sendMessage(it, message)
+        }
+    }
+
     fun sendMessageToAllUsers(message: String) {
-        userRepository.findAll().forEach { sendMessage(it, message) }
+        userRepository.findAll(includeBlockedBy = false).forEach { sendMessage(it, message) }
     }
 
     fun sendMessageToUser(userId: Int, message: String) {
         val user = userRepository.findById(userId).orElseThrow { NoSuchElementException("User with id = $userId not found") }
         sendMessage(user, message)
+    }
+
+    @Transactional
+    fun setBlockedBy(user: BotUser) {
+        user.isBlockedBy = true
+        userRepository.save(user)
+        itemService.clearSubscriptions(userId = user.id)
+        log.warn { "Blocked by $user! All subscriptions well be removed" }
     }
 
     private fun sendMessage(user: BotUser, message: String) {
@@ -71,6 +103,12 @@ class NotifyService(
             HttpMethod.POST,
             request,
             String::class.java
+        )
+    }
+
+    private fun saveMessage(user: BotUser, message: String) {
+        messageRepository.save(
+            Message(user = user, message = message, direction = MessageDirection.OUTBOUND)
         )
     }
 
@@ -101,3 +139,5 @@ class NotifyService(
         return ((BigDecimal.ONE - now.divide(before, MathContext.DECIMAL32)).abs() * BigDecimal(100)).setScale(2, RoundingMode.HALF_UP)
     }
 }
+
+private const val ITEM_NOT_AVAILABLE_MESSAGE = "Товар более не доступен в магазине. Все уведомления по нему будут отключены."

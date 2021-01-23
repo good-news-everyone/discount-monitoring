@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository
 interface ItemSubscribersRepository : JpaRepository<ItemSubscriber, Long> {
 
     fun existsByItemIdAndUserId(itemId: Long, userId: Long): Boolean
+    fun deleteAllByItemIdIn(ids: List<Long>)
 
     @Query("select count(i_s) from ItemSubscriber i_s where i_s.itemId = (select i.id from Item i where i.url = :url) and i_s.userId = :userId")
     fun countSubscriptionsByUrlAndUserId(@Param("url") url: String, @Param("userId") userId: Long): Int

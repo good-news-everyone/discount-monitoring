@@ -112,7 +112,7 @@ class CheckDiscountService(
         val startTime = System.nanoTime()
         return function.invoke().also {
             val difference = System.nanoTime() - startTime
-            logger.info("Recheck all items took ${TimeUnit.NANOSECONDS.toMillis(difference)}ms")
+            logger.info("Recheck all items took ${TimeUnit.NANOSECONDS.toSeconds(difference)} seconds")
         }
     }
 }

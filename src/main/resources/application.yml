@@ -25,6 +25,6 @@ logging:
   register-shutdown-hook: true
 app:
   bot:
-    name: ${BOT_NAME}
-    token: ${BOT_TOKEN}
+    name: ${BOT_NAME:not-valid}
+    token: ${BOT_TOKEN:not-valid}
   threads-count: ${THREADS_COUNT:1}
