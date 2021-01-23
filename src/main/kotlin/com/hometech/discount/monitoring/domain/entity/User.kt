@@ -35,6 +35,6 @@ fun Message.getUser(): BotUser {
         lastName = this.from.lastName,
         userName = this.from.userName,
         isBlockedBy = false,
-        contact = this.contact.phoneNumber
+        contact = this.contact?.phoneNumber
     )
 }
