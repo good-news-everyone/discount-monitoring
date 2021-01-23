@@ -11,6 +11,13 @@ data class ItemInfo(
     val additionalInfo: AdditionalInfo
 ) {
     fun toEntity(): Item {
-        return Item(url, name, priceCurrency, price)
+        return Item(
+            url = url,
+            name = name,
+            priceCurrency = priceCurrency,
+            price = price
+        ).also {
+            it.additionalInfo = this.additionalInfo
+        }
     }
 }

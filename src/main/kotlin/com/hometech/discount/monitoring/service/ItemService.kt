@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+@ObsoleteCoroutinesApi
 @Service
 class ItemService(
     private val checkDiscountService: CheckDiscountService,
@@ -41,7 +42,7 @@ class ItemService(
         return item
     }
 
-    fun createSubscription(user: BotUser, item: Item) {
+    private fun createSubscription(user: BotUser, item: Item) {
         val subscriptionExists = itemSubscriberRepository.existsByItemIdAndUserId(
             requireNotNull(item.id),
             user.id.toLong()

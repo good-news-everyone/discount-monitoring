@@ -20,6 +20,8 @@ class PriceLog(
     var id: Long? = null
     val priceChange = PriceChange.resolvePriceChange(priceBefore, priceNow)
     val timeChecked = LocalDateTime.now()
+
+    fun hasChanges() = priceChange != PriceChange.NONE
 }
 
 enum class PriceChange(val literal: String) {

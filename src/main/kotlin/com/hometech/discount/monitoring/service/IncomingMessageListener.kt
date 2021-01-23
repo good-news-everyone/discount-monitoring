@@ -4,6 +4,7 @@ import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.entity.getUser
 import com.hometech.discount.monitoring.domain.repository.MessageRepository
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
@@ -12,6 +13,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 
+@ObsoleteCoroutinesApi
 @Component
 @Profile("production")
 class IncomingMessageListener(

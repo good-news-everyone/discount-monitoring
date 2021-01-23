@@ -55,4 +55,6 @@ class AdditionalInfoLog(
             "Размер ${this.name} появился в наличии!"
         else "Размера ${this.name} больше нет в наличии!"
     }
+
+    fun hasChanges(): Boolean = infoBefore != infoNow
 }

@@ -2,10 +2,12 @@ package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.domain.entity.Item
 import com.hometech.discount.monitoring.parser.ParserType
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.objects.Update
 
+@ObsoleteCoroutinesApi
 @Component
 class CommandHandler(private val itemService: ItemService) {
 
@@ -46,7 +48,7 @@ class CommandHandler(private val itemService: ItemService) {
     private fun Update.userId(): Int = this.message.from.id
 
     companion object {
-        private val welcomeMessage = """Привет! Меня зовут Бот.
+        val welcomeMessage = """Привет! Меня зовут Бот.
             | Я помогаю отслеживать скидки на товары в определенных магазинах.
             | Как я работаю? Для того чтобы я отслеживал для вас скидки на товар, нужно всего лишь скинуть мне ссылку на страницу товара, например: 'https://some-shop.com/item123'
             | Если всё получится, то я отвечу сообщением 'Запрос принят! Мы оповестим о изменении цены.'.

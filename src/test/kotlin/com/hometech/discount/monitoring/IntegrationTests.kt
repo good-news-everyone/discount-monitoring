@@ -7,10 +7,8 @@ import com.hometech.discount.monitoring.parser.impl.ZaraParser
 import io.kotest.matchers.nulls.shouldNotBeNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 
-@SpringBootTest(classes = [MonitoringApplication::class])
-class MonitoringApplicationTests {
+class IntegrationTests : BaseIntegrationTest() {
 
     @Autowired
     lateinit var hmParser: HmParser

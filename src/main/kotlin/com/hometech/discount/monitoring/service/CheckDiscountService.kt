@@ -75,8 +75,8 @@ class CheckDiscountService(
         val changedItems = mutableListOf<Item>()
         recheckedItems.forEach {
             if (it.itemChange != null) {
-                priceLogs.add(it.itemChange.priceLog)
-                additionalLogs.add(it.itemChange.additionalInfoLog)
+                if (it.itemChange.priceLog.hasChanges()) priceLogs.add(it.itemChange.priceLog)
+                if (it.itemChange.additionalInfoLog.hasChanges()) additionalLogs.add(it.itemChange.additionalInfoLog)
                 if (it.isItemChanged()) changedItems.add(it.item)
             }
         }

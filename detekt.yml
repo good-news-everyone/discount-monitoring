@@ -10,7 +10,8 @@ comments:
 
 complexity:
   LongParameterList:
-    threshold: 5
+    functionThreshold: 5
+    constructorThreshold: 30
     active: true
   TooManyFunctions:
     thresholdInInterfaces: 5

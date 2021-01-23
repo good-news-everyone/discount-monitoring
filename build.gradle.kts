@@ -1,38 +1,62 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+val detektVersion: String by project
+val ktlintVersion: String by project
+val kotlinLoggingVersion: String by project
+val testcontainersVersion: String by project
+val kotestVersion: String by project
+val springCloudVersion: String by project
+val telegramBotsVersion: String by project
+val jsoupVersion: String by project
+val hibernateTypesVersion: String by project
+val mockkVersion: String by project
 
 plugins {
-    id("org.springframework.boot") version "2.4.0"
-    id("io.spring.dependency-management") version "1.0.10.RELEASE"
-    id("io.gitlab.arturbosch.detekt") version "1.10.0"
-    id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
-    id("com.google.cloud.tools.jib") version "2.6.0"
-    id("com.gorylenko.gradle-git-properties") version "2.2.2"
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+    id("io.gitlab.arturbosch.detekt")
+    id("org.jlleitschuh.gradle.ktlint")
+    id("com.google.cloud.tools.jib")
+    id("com.gorylenko.gradle-git-properties")
 
-    val kotlinVersion = "1.4.21"
-
-    kotlin("jvm") version kotlinVersion
-    kotlin("plugin.spring") version kotlinVersion
-    kotlin("plugin.jpa") version kotlinVersion
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    kotlin("plugin.jpa")
 }
 
-ktlint {
-    version.set("0.39.0")
-    verbose.set(true)
-    coloredOutput.set(true)
-}
-
-group = "com.hometech.discount"
-version = "0.0.1"
-java.sourceCompatibility = JavaVersion.VERSION_11
-
-detekt {
-    toolVersion = "1.10.0"
-    input = files("src/main/kotlin")
-    config = files("detekt.yml")
-    reports {
-        html {
-            enabled = true
-            destination = file("detekt-report.html")
+tasks {
+    detekt {
+        toolVersion = detektVersion
+        input = files("src/main/kotlin")
+        config = files("detekt.yml")
+        reports {
+            html {
+                enabled = true
+                destination = file("detekt-report.html")
+            }
+        }
+    }
+    ktlint {
+        version.set(ktlintVersion)
+        verbose.set(true)
+        coloredOutput.set(true)
+    }
+    compileKotlin {
+        kotlinOptions {
+            freeCompilerArgs = listOf("-Xjsr305=strict")
+            jvmTarget = "11"
+        }
+    }
+    compileTestKotlin {
+        kotlinOptions {
+            freeCompilerArgs = listOf("-Xjsr305=strict")
+            jvmTarget = "11"
+        }
+    }
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events("passed", "skipped", "failed", "standard_out", "standard_error")
+            showStandardStreams = true
+            setExceptionFormat("full")
         }
     }
 }
@@ -52,29 +76,26 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.postgresql:postgresql")
 
-    implementation("io.github.microutils:kotlin-logging:1.6.24")
-    implementation("org.telegram:telegrambots-spring-boot-starter:5.0.1")
-    implementation("org.jsoup:jsoup:1.13.1")
-    implementation("com.vladmihalcea:hibernate-types-52:2.10.2")
+    implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
+    implementation("org.telegram:telegrambots-spring-boot-starter:$telegramBotsVersion")
+    implementation("org.jsoup:jsoup:$jsoupVersion")
+    implementation("com.vladmihalcea:hibernate-types-52:$hibernateTypesVersion")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
-    runtimeOnly("org.postgresql:postgresql")
-
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
+        exclude(module = "mockito-core")
     }
-    testImplementation("io.kotest:kotest-runner-junit5-jvm:4.3.2")
+    testImplementation("com.ninja-squad:springmockk:$mockkVersion")
+    testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
+    testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "11"
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
     }
 }
