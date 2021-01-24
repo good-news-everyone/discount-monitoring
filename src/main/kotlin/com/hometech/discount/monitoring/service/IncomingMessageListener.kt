@@ -31,12 +31,12 @@ class IncomingMessageListener(
     override fun getBotUsername(): String = applicationProperties.bot.name
 
     override fun onUpdateReceived(update: Update) {
-        messageRepository.save(update.toMessage())
         when (update.message.messageType()) {
             MessageType.URL -> handleUrl(update)
             MessageType.COMMAND -> handleCommand(update)
             else -> reply(update.chatId(), "В сообщении нет ссылки или команды :(")
         }
+        messageRepository.save(update.toMessage())
     }
 
     private fun handleUrl(update: Update) {
