@@ -13,6 +13,7 @@ import com.hometech.discount.monitoring.domain.model.MessageBody
 import com.hometech.discount.monitoring.domain.repository.MessageRepository
 import com.hometech.discount.monitoring.domain.repository.UserRepository
 import com.hometech.discount.monitoring.domain.repository.findAll
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpEntity
@@ -30,6 +31,7 @@ import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
 
+@ObsoleteCoroutinesApi
 @Component
 class NotifyService(
     private val restTemplate: RestTemplate,
@@ -88,7 +90,7 @@ class NotifyService(
         user.isBlockedBy = true
         userRepository.save(user)
         itemService.clearSubscriptions(userId = user.id)
-        log.warn { "Blocked by $user! All subscriptions well be removed" }
+        log.warn { "Blocked by $user! All subscriptions will be removed" }
     }
 
     private fun sendMessage(user: BotUser, message: String) {

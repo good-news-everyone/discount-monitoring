@@ -36,7 +36,7 @@ class CheckDiscountService(
         nThreads = applicationProperties.threadsCount,
         name = "Items recheck context"
     )
-    private val logger = KotlinLogging.logger {}
+    private val log = KotlinLogging.logger {}
 
     fun parseItemInfo(url: String): ItemInfo {
         return parserResolver.findByUrl(url).getItemInfo(url)
@@ -56,7 +56,8 @@ class CheckDiscountService(
             val changeWrapper = try {
                 recheckItem(it)
             } catch (e: Exception) {
-                logger.error { e }
+                log.error { "Error occurred while parsing item info $it. Error: ${e.javaClass} ${e.message}" }
+                log.error { e.printStackTrace() }
                 null
             } ?: return@parallelMap ItemChangeWrapper(it, null)
             if (changeWrapper.priceLog.priceNow != it.currentPrice) {
@@ -112,7 +113,7 @@ class CheckDiscountService(
         val startTime = System.nanoTime()
         return function.invoke().also {
             val difference = System.nanoTime() - startTime
-            logger.info("Recheck all items took ${TimeUnit.NANOSECONDS.toSeconds(difference)} seconds")
+            log.info("Recheck all items took ${TimeUnit.NANOSECONDS.toSeconds(difference)} seconds")
         }
     }
 }

@@ -56,4 +56,8 @@ class Item(
         if (currentPrice > highestPrice)
             this.highestPrice = newPrice
     }
+
+    override fun toString(): String {
+        return "Item(id = $id, type = $type, url = $url)"
+    }
 }
