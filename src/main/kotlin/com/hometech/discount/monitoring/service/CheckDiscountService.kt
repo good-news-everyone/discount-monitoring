@@ -57,7 +57,7 @@ class CheckDiscountService(
                 recheckItem(it)
             } catch (e: Exception) {
                 log.error { "Error occurred while parsing item info $it. Error: ${e.javaClass} ${e.message}" }
-                log.error { e.printStackTrace() }
+                log.trace { e.printStackTrace() }
                 null
             } ?: return@parallelMap ItemChangeWrapper(it, null)
             if (changeWrapper.priceLog.priceNow != it.currentPrice) {

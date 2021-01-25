@@ -25,17 +25,17 @@ class ItemService(
     private val notifyService: NotifyService
 ) {
 
-    private val logger = KotlinLogging.logger { }
+    private val log = KotlinLogging.logger { }
 
     fun createItem(url: String, user: BotUser): Item {
         userRepository.save(user)
-        logger.trace { "user request subscription for item $url" }
+        log.debug { "user request subscription for item $url" }
         val item = if (itemRepository.existsByUrl(url)) {
-            logger.trace { "item already exists, creating subscription" }
+            log.debug { "item already exists, creating subscription" }
             itemRepository.findOneByUrl(url)
         } else {
             val itemInfo = checkDiscountService.parseItemInfo(url)
-            logger.trace { "item not exists, creating creating new item" }
+            log.debug { "item not exists, creating creating new item" }
             itemRepository.save(itemInfo.toEntity())
         }
         createSubscription(user, item)
@@ -87,7 +87,7 @@ class ItemService(
             }
         }
         notAvailableItems.forEach {
-            logger.warn {
+            log.warn {
                 "Item ${it.url} not available anymore. Users will be notified and all subscriptions will be deleted."
             }
             notifyService.notifyUsersAboutItemDeletion(it)
