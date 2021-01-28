@@ -1,7 +1,6 @@
 package com.hometech.discount.monitoring.domain.entity
 
 import java.time.LocalDateTime
-import javax.persistence.CascadeType
 import javax.persistence.Entity
 import javax.persistence.EnumType
 import javax.persistence.Enumerated
@@ -19,7 +18,7 @@ class Message(
     val message: String,
     val timestamp: LocalDateTime = LocalDateTime.now(),
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     val user: BotUser,
 

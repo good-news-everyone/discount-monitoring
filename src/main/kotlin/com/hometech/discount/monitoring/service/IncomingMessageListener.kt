@@ -4,6 +4,7 @@ import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.entity.getUser
 import com.hometech.discount.monitoring.domain.repository.MessageRepository
+import com.hometech.discount.monitoring.domain.repository.UserRepository
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
 import org.springframework.context.annotation.Profile
@@ -20,7 +21,8 @@ class IncomingMessageListener(
     private val applicationProperties: ApplicationProperties,
     private val itemService: ItemService,
     private val commandHandler: CommandHandler,
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val userRepository: UserRepository
 ) : TelegramLongPollingBot() {
 
     private val logger = KotlinLogging.logger { }
@@ -36,7 +38,7 @@ class IncomingMessageListener(
             MessageType.COMMAND -> handleCommand(update)
             else -> reply(update.chatId(), "В сообщении нет ссылки или команды :(")
         }
-        messageRepository.save(update.toMessage())
+        saveMessage(update)
     }
 
     private fun handleUrl(update: Update) {
@@ -63,6 +65,13 @@ class IncomingMessageListener(
                 .text(message)
                 .build()
         )
+    }
+
+    private fun saveMessage(update: Update) {
+        val message = update.toMessage()
+        val user = message.user
+        if (userRepository.existsById(user.id).not()) userRepository.save(user)
+        messageRepository.save(message)
     }
 
     private fun Message.messageType(): MessageType {
