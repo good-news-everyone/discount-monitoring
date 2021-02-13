@@ -27,6 +27,7 @@ import org.springframework.web.client.RestTemplate
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import java.time.LocalDateTime
 
 @ObsoleteCoroutinesApi
 @Component
@@ -105,6 +106,7 @@ class NotifyService(
             this.user = user
             this.message = message
             this.direction = MessageDirection.OUTBOUND
+            this.timestamp = LocalDateTime.now()
         }
     }
 
