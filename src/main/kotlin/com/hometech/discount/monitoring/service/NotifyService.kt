@@ -45,17 +45,17 @@ class NotifyService(
         notifyingItems
             .filter { it.itemChange != null && it.isItemChanged() }
             .forEach { wrapper ->
-                val users = transaction { wrapper.item.subscribers }.toList()
-                users.forEach {
-                    try {
-                        val messageBody = buildMessage(wrapper)
-                        sendMessage(it, messageBody)
-                        transaction { saveMessage(it, messageBody) }
-                    } catch (ex: HttpClientErrorException) {
-                        log.error { ex }
-                        if (ex.statusCode == HttpStatus.FORBIDDEN) setBlockedBy(it)
+                transaction { wrapper.item.subscribers.toList() }
+                    .forEach {
+                        try {
+                            val messageBody = buildMessage(wrapper)
+                            sendMessage(it, messageBody)
+                            transaction { saveMessage(it, messageBody) }
+                        } catch (ex: HttpClientErrorException) {
+                            log.error { ex }
+                            if (ex.statusCode == HttpStatus.FORBIDDEN) setBlockedBy(it)
+                        }
                     }
-                }
             }
     }
 
@@ -66,6 +66,7 @@ class NotifyService(
                 ${item.url}
             """.trimIndent()
             sendMessage(it, message)
+            saveMessage(it, message)
         }
     }
 

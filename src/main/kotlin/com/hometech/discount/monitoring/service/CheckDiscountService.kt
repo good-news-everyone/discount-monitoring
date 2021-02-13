@@ -37,7 +37,7 @@ class CheckDiscountService(
         return parserResolver.findByUrl(url).getItemInfo(url)
     }
 
-    @Scheduled(fixedDelay = 5 * 1000 * 60) // раз в 5 минут обновляем информацию о товарах
+    @Scheduled(fixedDelay = 2 * 1000 * 60) // раз в 2 минуты запускаем джобу по обновлению товаров
     fun recheckAllItems() {
         val recheckedItems = measureExecution {
             runBlocking(context = coroutineDispatcher) { recheckAll() }
