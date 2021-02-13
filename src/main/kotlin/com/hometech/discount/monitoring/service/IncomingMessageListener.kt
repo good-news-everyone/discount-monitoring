@@ -68,11 +68,13 @@ class IncomingMessageListener(
     }
 
     private fun saveMessage(update: Update, user: User) {
-        Message.new {
-            this.direction = MessageDirection.INBOUND
-            this.message = update.message.text
-            this.user = user
-            this.timestamp = LocalDateTime.now()
+        transaction {
+            Message.new {
+                this.direction = MessageDirection.INBOUND
+                this.message = update.message.text
+                this.user = user
+                this.timestamp = LocalDateTime.now()
+            }
         }
     }
 
