@@ -1,8 +1,10 @@
 package com.hometech.discount.monitoring.service
 
-import com.hometech.discount.monitoring.domain.entity.Item
+import com.hometech.discount.monitoring.domain.exposed.entity.Item
+import com.hometech.discount.monitoring.domain.exposed.entity.User
 import com.hometech.discount.monitoring.parser.ParserType
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.objects.Update
@@ -28,11 +30,15 @@ class CommandHandler(private val itemService: ItemService) {
         return ParserType.allShops.joinToString(separator = "\n")
     }
 
-    private fun goods(userId: Int): String = itemService.findItemsByUser(userId).joinToString(separator = "\n") { it.asString() }
+    private fun goods(userId: Int): String {
+        return transaction {
+            User.findById(userId.toLong())?.items?.joinToString(separator = "\n") { it.asString() } ?: ""
+        }
+    }
 
     private fun unsubscribe(url: String, userId: Int): String {
         return try {
-            itemService.removeSubscriptionByUrl(url, userId)
+            transaction { itemService.removeSubscriptionByUrl(url, userId) }
             SUCCESS
         } catch (e: EmptyResultDataAccessException) {
             BAD_COMMAND
@@ -40,7 +46,7 @@ class CommandHandler(private val itemService: ItemService) {
     }
 
     private fun unsubscribeAll(userId: Int): String {
-        itemService.clearSubscriptions(userId)
+        transaction { itemService.clearSubscriptions(userId.toLong()) }
         return SUCCESS
     }
 

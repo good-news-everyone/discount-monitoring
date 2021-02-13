@@ -1,4 +1,4 @@
-package com.hometech.discount.monitoring
+package com.hometech.discount.monitoring.controller
 
 import com.hometech.discount.monitoring.domain.model.NotificationRequest
 import com.hometech.discount.monitoring.service.NotifyService

@@ -1,20 +1,18 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
-import com.hometech.discount.monitoring.domain.entity.AdditionalInfoLog
-import com.hometech.discount.monitoring.domain.entity.BotUser
-import com.hometech.discount.monitoring.domain.entity.Item
-import com.hometech.discount.monitoring.domain.entity.Message
-import com.hometech.discount.monitoring.domain.entity.MessageDirection
-import com.hometech.discount.monitoring.domain.entity.PriceChange
-import com.hometech.discount.monitoring.domain.entity.PriceLog
+import com.hometech.discount.monitoring.domain.exposed.entity.Item
+import com.hometech.discount.monitoring.domain.exposed.entity.Message
+import com.hometech.discount.monitoring.domain.exposed.entity.MessageDirection
+import com.hometech.discount.monitoring.domain.exposed.entity.PriceChange
+import com.hometech.discount.monitoring.domain.exposed.entity.User
+import com.hometech.discount.monitoring.domain.model.AdditionalInfoLogView
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
-import com.hometech.discount.monitoring.domain.repository.MessageRepository
-import com.hometech.discount.monitoring.domain.repository.UserRepository
-import com.hometech.discount.monitoring.domain.repository.findAll
+import com.hometech.discount.monitoring.domain.model.PriceLogView
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -23,7 +21,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
@@ -35,8 +32,6 @@ import java.math.RoundingMode
 @Component
 class NotifyService(
     private val restTemplate: RestTemplate,
-    private val userRepository: UserRepository,
-    private val messageRepository: MessageRepository,
     applicationProperties: ApplicationProperties
 ) {
     @Autowired
@@ -50,9 +45,7 @@ class NotifyService(
         notifyingItems
             .filter { it.itemChange != null && it.isItemChanged() }
             .forEach { wrapper ->
-                val users = userRepository.findAllUsersSubscribedOnItem(
-                    requireNotNull(wrapper.item.id)
-                )
+                val users = transaction { wrapper.item.subscribers }
                 users.forEach {
                     try {
                         val messageBody = buildMessage(wrapper)
@@ -67,7 +60,7 @@ class NotifyService(
     }
 
     fun notifyUsersAboutItemDeletion(item: Item) {
-        userRepository.findAllUsersSubscribedOnItem(item.id!!).forEach {
+        transaction { item.subscribers }.forEach {
             val message = """
                 $ITEM_NOT_AVAILABLE_MESSAGE
                 ${item.url}
@@ -77,23 +70,21 @@ class NotifyService(
     }
 
     fun sendMessageToAllUsers(message: String) {
-        userRepository.findAll(includeBlockedBy = false).forEach { sendMessage(it, message) }
+        User.findAll().forEach { sendMessage(it, message) }
     }
 
     fun sendMessageToUser(userId: Int, message: String) {
-        val user = userRepository.findById(userId).orElseThrow { NoSuchElementException("User with id = $userId not found") }
+        val user = User.findById(userId.toLong()) ?: throw NoSuchElementException("User with id = $userId not found")
         sendMessage(user, message)
     }
 
-    @Transactional
-    fun setBlockedBy(user: BotUser) {
+    fun setBlockedBy(user: User) {
         user.isBlockedBy = true
-        userRepository.save(user)
-        itemService.clearSubscriptions(userId = user.id)
+        itemService.clearSubscriptions(userId = user.id.value)
         log.warn { "Blocked by $user! All subscriptions will be removed" }
     }
 
-    private fun sendMessage(user: BotUser, message: String) {
+    private fun sendMessage(user: User, message: String) {
         val request = HttpEntity<MultiValueMap<String, String>>(
             MessageBody(user.chatId, message).toMultivaluedMap(),
             HttpHeaders().apply {
@@ -108,10 +99,12 @@ class NotifyService(
         )
     }
 
-    private fun saveMessage(user: BotUser, message: String) {
-        messageRepository.save(
-            Message(user = user, message = message, direction = MessageDirection.OUTBOUND)
-        )
+    private fun saveMessage(user: User, message: String) {
+        Message.new {
+            this.user = user
+            this.message = message
+            this.direction = MessageDirection.OUTBOUND
+        }
     }
 
     private fun buildMessage(wrapper: ItemChangeWrapper): String {
@@ -124,7 +117,7 @@ class NotifyService(
             .joinToString(separator = "\n")
     }
 
-    private fun messageOnPriceChange(item: Item, priceChange: PriceLog): String {
+    private fun messageOnPriceChange(item: Item, priceChange: PriceLogView): String {
         if (priceChange.priceChange == PriceChange.NONE) return ""
         return """Цена ${priceChange.priceChange.literal} на ${calculatePercentage(priceChange.priceNow, priceChange.priceBefore)}%!
               |Было - ${priceChange.priceBefore.setScale(2, RoundingMode.HALF_UP)} ${item.priceCurrency}
@@ -132,7 +125,7 @@ class NotifyService(
             .trimMargin()
     }
 
-    private fun messageOnAdditionalInfoChange(additionalInfoChange: AdditionalInfoLog): String {
+    private fun messageOnAdditionalInfoChange(additionalInfoChange: AdditionalInfoLogView): String {
         if (additionalInfoChange.infoBefore == additionalInfoChange.infoNow) return ""
         return additionalInfoChange.difference()
     }

@@ -1,12 +1,15 @@
 package com.hometech.discount.monitoring
 
-import com.hometech.discount.monitoring.domain.entity.BotUser
-import com.hometech.discount.monitoring.domain.entity.Item
-import com.hometech.discount.monitoring.domain.entity.ItemSubscriber
+import com.hometech.discount.monitoring.domain.exposed.entity.Item
+import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscription
+import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscriptionTable
+import com.hometech.discount.monitoring.domain.exposed.entity.ItemTable
+import com.hometech.discount.monitoring.domain.exposed.entity.UserTable
+import com.hometech.discount.monitoring.domain.exposed.entity.getUser
 import com.hometech.discount.monitoring.helper.ZARA_URL
+import com.hometech.discount.monitoring.helper.createRelations
 import com.hometech.discount.monitoring.helper.randomInt
-import com.hometech.discount.monitoring.helper.randomItemInfo
-import com.hometech.discount.monitoring.helper.randomLong
+import com.hometech.discount.monitoring.helper.randomItem
 import com.hometech.discount.monitoring.helper.randomString
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.service.CommandHandler
@@ -14,6 +17,8 @@ import com.hometech.discount.monitoring.service.CommandHandler.Companion.SUCCESS
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,8 +26,8 @@ import org.telegram.telegrambots.meta.api.objects.Chat
 import org.telegram.telegrambots.meta.api.objects.Contact
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
-import org.telegram.telegrambots.meta.api.objects.User
 import kotlin.math.absoluteValue
+import org.telegram.telegrambots.meta.api.objects.User as TelegramUser
 
 @ObsoleteCoroutinesApi
 class CommandHandlerTests : BaseIntegrationTest() {
@@ -32,9 +37,11 @@ class CommandHandlerTests : BaseIntegrationTest() {
 
     @BeforeEach
     fun cleanUpDatabase() {
-        subscribersRepository.deleteAll()
-        userRepository.deleteAll()
-        itemRepository.deleteAll()
+        transaction {
+            ItemSubscriptionTable.deleteAll()
+            UserTable.deleteAll()
+            ItemTable.deleteAll()
+        }
     }
 
     @Test
@@ -59,11 +66,14 @@ class CommandHandlerTests : BaseIntegrationTest() {
 
     @Test
     fun `should return items`() {
-        val item = randomItemInfo().toEntity()
-        val update = createUpdate("/goods")
-        val user = update.message.getUser()
+        val (item, update) = transaction {
+            val item = randomItem()
+            val update = createUpdate("/goods")
+            val user = update.message.getUser()
+            createRelations(user, item)
+            Pair(item, update)
+        }
 
-        createRelations(user, item)
         val goods = commandHandler.handleCommand(update)
 
         goods.shouldContain(item.name)
@@ -72,47 +82,50 @@ class CommandHandlerTests : BaseIntegrationTest() {
 
     @Test
     fun `should unsubscribe single item`() {
-        val item1 = randomItemInfo().toEntity()
-        val item2 = randomItemInfo(url = "$ZARA_URL/another").toEntity()
-        val update = createUpdate("/unsubscribe ${item1.url}")
-        val user = update.message.getUser()
+        val update = transaction {
+            val item1 = randomItem()
+            val item2 = randomItem(url = "$ZARA_URL/another")
+            val update = createUpdate("/unsubscribe ${item1.url}")
+            val user = update.message.getUser()
 
-        createRelations(user, item1)
-        createRelations(user, item2)
+            createRelations(user, item1)
+            createRelations(user, item2)
+            update
+        }
 
         commandHandler.handleCommand(update).shouldBe(SUCCESS)
-        itemRepository.count().shouldBe(1)
-        subscribersRepository.count().shouldBe(1)
+
+        transaction {
+            Item.count().shouldBe(1)
+            ItemSubscription.count().shouldBe(1)
+        }
     }
 
     @Test
     fun `should unsubscribe all items`() {
-        val item1 = randomItemInfo().toEntity()
-        val item2 = randomItemInfo(url = "$ZARA_URL/another").toEntity()
-        val update = createUpdate("/unsubscribe_all")
-        val user = update.message.getUser()
+        val update = transaction {
+            val item1 = randomItem()
+            val item2 = randomItem(url = "$ZARA_URL/another")
+            val update = createUpdate("/unsubscribe_all")
+            val user = update.message.getUser()
 
-        createRelations(user, item1)
-        createRelations(user, item2)
+            createRelations(user, item1)
+            createRelations(user, item2)
+            update
+        }
 
         commandHandler.handleCommand(update).shouldBe(SUCCESS)
-        itemRepository.count().shouldBe(0)
-        subscribersRepository.count().shouldBe(0)
-    }
-
-    private fun createRelations(user: BotUser, item: Item) {
-        userRepository.save(user)
-        itemRepository.save(item)
-        subscribersRepository.save(
-            ItemSubscriber(itemId = item.id!!, userId = user.id.toLong())
-        )
+        transaction {
+            Item.count().shouldBe(0)
+            ItemSubscription.count().shouldBe(0)
+        }
     }
 
     private fun createUpdate(text: String): Update {
         val contact = Contact().apply {
             this.phoneNumber = randomString()
         }
-        val user = User().apply {
+        val user = TelegramUser().apply {
             this.firstName = randomString()
             this.lastName = randomString()
             this.isBot = false
@@ -124,24 +137,12 @@ class CommandHandlerTests : BaseIntegrationTest() {
             this.text = text
             this.from = user
             this.chat = Chat().also {
+                it.id = randomInt().absoluteValue.toLong()
                 it.userName = randomString()
             }
         }
         return Update().apply {
             this.message = message
         }
-    }
-
-    fun Message.getUser(): BotUser {
-        return BotUser(
-            id = this.from.id,
-            chatId = randomLong().absoluteValue,
-            firstName = this.from.firstName,
-            isBot = this.from.isBot,
-            lastName = this.from.lastName,
-            userName = this.from.userName,
-            isBlockedBy = false,
-            contact = this.contact.phoneNumber
-        )
     }
 }

@@ -6,8 +6,8 @@ val kotestVersion: String by project
 val springCloudVersion: String by project
 val telegramBotsVersion: String by project
 val jsoupVersion: String by project
-val hibernateTypesVersion: String by project
 val mockkVersion: String by project
+val exposedVersion: String by project
 
 plugins {
     id("org.springframework.boot")
@@ -19,7 +19,6 @@ plugins {
 
     kotlin("jvm")
     kotlin("plugin.spring")
-    kotlin("plugin.jpa")
 }
 
 tasks {
@@ -68,7 +67,6 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
@@ -76,17 +74,20 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.exposed:exposed-spring-boot-starter:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
     implementation("org.postgresql:postgresql")
 
     implementation("io.github.microutils:kotlin-logging:$kotlinLoggingVersion")
     implementation("org.telegram:telegrambots-spring-boot-starter:$telegramBotsVersion")
     implementation("org.jsoup:jsoup:$jsoupVersion")
-    implementation("com.vladmihalcea:hibernate-types-52:$hibernateTypesVersion")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
+        exclude(group = "com.vaadin.external.google", module = "android-json")
         exclude(module = "mockito-core")
     }
     testImplementation("com.ninja-squad:springmockk:$mockkVersion")

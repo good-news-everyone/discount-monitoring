@@ -1,18 +1,19 @@
 package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
-import com.hometech.discount.monitoring.domain.entity.MessageDirection
-import com.hometech.discount.monitoring.domain.entity.getUser
-import com.hometech.discount.monitoring.domain.repository.MessageRepository
-import com.hometech.discount.monitoring.domain.repository.UserRepository
+import com.hometech.discount.monitoring.domain.exposed.entity.Message
+import com.hometech.discount.monitoring.domain.exposed.entity.MessageDirection
+import com.hometech.discount.monitoring.domain.exposed.entity.User
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
-import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
+import java.time.LocalDateTime
+import org.telegram.telegrambots.meta.api.objects.Message as TelegramMessage
 
 @ObsoleteCoroutinesApi
 @Component
@@ -20,9 +21,7 @@ import org.telegram.telegrambots.meta.api.objects.Update
 class IncomingMessageListener(
     private val applicationProperties: ApplicationProperties,
     private val itemService: ItemService,
-    private val commandHandler: CommandHandler,
-    private val messageRepository: MessageRepository,
-    private val userRepository: UserRepository
+    private val commandHandler: CommandHandler
 ) : TelegramLongPollingBot() {
 
     private val logger = KotlinLogging.logger { }
@@ -33,18 +32,19 @@ class IncomingMessageListener(
     override fun getBotUsername(): String = applicationProperties.bot.name
 
     override fun onUpdateReceived(update: Update) {
+        val user = transaction { User.findByMessageOrCreateIfNone(update.message) }
         when (update.message.messageType()) {
-            MessageType.URL -> handleUrl(update)
+            MessageType.URL -> handleUrl(update, user)
             MessageType.COMMAND -> handleCommand(update)
             else -> reply(update.chatId(), "В сообщении нет ссылки или команды :(")
         }
-        saveMessage(update)
+        saveMessage(update, user)
     }
 
-    private fun handleUrl(update: Update) {
+    private fun handleUrl(update: Update, user: User) {
         val chatId = update.chatId()
         try {
-            itemService.createItem(update.message.text, update.message.getUser())
+            itemService.createItem(update.message.text, user)
             reply(chatId, "Запрос принят! Мы оповестим о изменении цены.")
         } catch (e: Exception) {
             logger.error {
@@ -67,14 +67,16 @@ class IncomingMessageListener(
         )
     }
 
-    private fun saveMessage(update: Update) {
-        val message = update.toMessage()
-        val user = message.user
-        if (userRepository.existsById(user.id).not()) userRepository.save(user)
-        messageRepository.save(message)
+    private fun saveMessage(update: Update, user: User) {
+        Message.new {
+            this.direction = MessageDirection.INBOUND
+            this.message = update.message.text
+            this.user = user
+            this.timestamp = LocalDateTime.now()
+        }
     }
 
-    private fun Message.messageType(): MessageType {
+    private fun TelegramMessage.messageType(): MessageType {
         if (this.text.isCommand()) return MessageType.COMMAND
         if (this.isUrl()) return MessageType.URL
         return MessageType.TRASH
@@ -84,20 +86,12 @@ class IncomingMessageListener(
         return CommandHandler.commands.any { this.trimStart().startsWith(it) }
     }
 
-    private fun Message.isUrl(): Boolean {
+    private fun TelegramMessage.isUrl(): Boolean {
         return this.text.contains(regex)
     }
 
     private fun Update.chatId(): String {
         return this.message.chatId.toString()
-    }
-
-    private fun Update.toMessage(): com.hometech.discount.monitoring.domain.entity.Message {
-        return com.hometech.discount.monitoring.domain.entity.Message(
-            message = this.message.text,
-            user = this.message.getUser(),
-            direction = MessageDirection.INBOUND
-        )
     }
 
     enum class MessageType {

@@ -9,12 +9,6 @@ spring:
     hikari:
       maximum-pool-size: ${MAXIMUM_POOL_SIZE:5}
       jdbc-url: ${spring.datasource.url}
-  jpa:
-    hibernate:
-      naming:
-        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
-        physical-strategy: org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: true
     baseline-on-migrate: true

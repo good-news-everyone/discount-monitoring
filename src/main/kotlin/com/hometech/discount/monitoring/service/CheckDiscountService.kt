@@ -2,15 +2,12 @@ package com.hometech.discount.monitoring.service
 
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.configuration.ParserResolver
-import com.hometech.discount.monitoring.domain.entity.AdditionalInfoLog
-import com.hometech.discount.monitoring.domain.entity.Item
-import com.hometech.discount.monitoring.domain.entity.PriceLog
+import com.hometech.discount.monitoring.domain.exposed.entity.Item
+import com.hometech.discount.monitoring.domain.model.AdditionalInfoLogView
 import com.hometech.discount.monitoring.domain.model.ChangeWrapper
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.ItemInfo
-import com.hometech.discount.monitoring.domain.repository.AdditionalInfoLogRepository
-import com.hometech.discount.monitoring.domain.repository.ItemRepository
-import com.hometech.discount.monitoring.domain.repository.PriceLogRepository
+import com.hometech.discount.monitoring.domain.model.PriceLogView
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,6 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.concurrent.TimeUnit
@@ -26,9 +24,6 @@ import java.util.concurrent.TimeUnit
 @Service
 class CheckDiscountService(
     private val parserResolver: ParserResolver,
-    private val itemRepository: ItemRepository,
-    private val priceLogRepository: PriceLogRepository,
-    private val additionalInfoLogRepository: AdditionalInfoLogRepository,
     private val notifyService: NotifyService,
     applicationProperties: ApplicationProperties
 ) {
@@ -47,55 +42,51 @@ class CheckDiscountService(
         val recheckedItems = measureExecution {
             runBlocking(context = coroutineDispatcher) { recheckAll() }
         }
-        saveItemsAndLogs(recheckedItems)
+        transaction { saveLogs(recheckedItems) }
         notifyService.notifyUsers(recheckedItems)
     }
 
     private suspend fun recheckAll(): List<ItemChangeWrapper> {
-        return itemRepository.findAll().parallelMap {
-            val changeWrapper = try {
-                recheckItem(it)
-            } catch (e: Exception) {
-                log.error { "Error occurred while parsing item info $it. Error: ${e.javaClass} ${e.message}" }
-                log.trace { e.printStackTrace() }
-                null
-            } ?: return@parallelMap ItemChangeWrapper(it, null)
-            if (changeWrapper.priceLog.priceNow != it.currentPrice) {
-                it.setNewPrice(changeWrapper.priceLog.priceNow)
+        return transaction { Item.all().toList() }
+            .parallelMap {
+                val changeWrapper = try {
+                    recheckItem(it)
+                } catch (e: Exception) {
+                    log.error { "Error occurred while parsing item info $it. Error: ${e.javaClass} ${e.message}" }
+                    log.trace { e.printStackTrace() }
+                    null
+                } ?: return@parallelMap ItemChangeWrapper(it, null)
+                transaction {
+                    if (changeWrapper.priceLog.priceNow != it.currentPrice) {
+                        it.setNewPrice(changeWrapper.priceLog.priceNow)
+                    }
+                    if (changeWrapper.additionalInfoLog.infoNow != it.additionalInfo) {
+                        it.additionalInfo = changeWrapper.additionalInfoLog.infoNow
+                    }
+                }
+                ItemChangeWrapper(it, changeWrapper)
             }
-            if (changeWrapper.additionalInfoLog.infoNow != it.additionalInfo) {
-                it.additionalInfo = changeWrapper.additionalInfoLog.infoNow
-            }
-            ItemChangeWrapper(it, changeWrapper)
-        }
     }
 
-    private fun saveItemsAndLogs(recheckedItems: List<ItemChangeWrapper>) {
-        val priceLogs = mutableListOf<PriceLog>()
-        val additionalLogs = mutableListOf<AdditionalInfoLog>()
-        val changedItems = mutableListOf<Item>()
+    private fun saveLogs(recheckedItems: List<ItemChangeWrapper>) {
         recheckedItems.forEach {
             if (it.itemChange != null) {
-                if (it.itemChange.priceLog.hasChanges()) priceLogs.add(it.itemChange.priceLog)
-                if (it.itemChange.additionalInfoLog.hasChanges()) additionalLogs.add(it.itemChange.additionalInfoLog)
-                if (it.isItemChanged()) changedItems.add(it.item)
+                if (it.itemChange.priceLog.hasChanges()) it.itemChange.priceLog.createEntity()
+                if (it.itemChange.additionalInfoLog.hasChanges()) it.itemChange.additionalInfoLog.createEntity()
             }
         }
-        priceLogRepository.saveAll(priceLogs)
-        additionalInfoLogRepository.saveAll(additionalLogs)
-        itemRepository.saveAll(changedItems)
     }
 
     private fun recheckItem(item: Item): ChangeWrapper {
         val url = item.url
         val itemInfo = parserResolver.findByUrl(url).getItemInfo(url)
-        val priceLog = PriceLog(
-            itemId = requireNotNull(item.id),
+        val priceLog = PriceLogView(
+            item = item,
             priceBefore = item.currentPrice,
             priceNow = itemInfo.price
         )
-        val infoLog = AdditionalInfoLog(
-            itemId = requireNotNull(item.id),
+        val infoLog = AdditionalInfoLogView(
+            item = item,
             infoBefore = item.additionalInfo,
             infoNow = itemInfo.additionalInfo
         )

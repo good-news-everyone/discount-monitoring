@@ -17,7 +17,6 @@ pluginManagement {
 
         kotlin("plugin.spring") version kotlinVersion
         kotlin("jvm") version kotlinVersion
-        kotlin("plugin.jpa") version kotlinVersion
     }
     repositories {
         gradlePluginPortal()
