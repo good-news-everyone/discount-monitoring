@@ -1,5 +1,6 @@
 package com.hometech.discount.monitoring.service
 
+import com.hometech.discount.monitoring.common.parallelMap
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.configuration.ParserResolver
 import com.hometech.discount.monitoring.domain.exposed.entity.Item
@@ -9,9 +10,6 @@ import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.PriceLogView
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
@@ -94,10 +92,6 @@ class CheckDiscountService(
             priceLog = priceLog,
             additionalInfoLog = infoLog
         )
-    }
-
-    suspend fun <A, B> Iterable<A>.parallelMap(f: suspend (A) -> B): List<B> = coroutineScope {
-        map { async { f(it) } }.awaitAll()
     }
 
     private inline fun <T> measureExecution(function: () -> T): T {

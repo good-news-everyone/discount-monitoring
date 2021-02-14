@@ -81,7 +81,7 @@ class NotifyService(
     }
 
     fun setBlockedBy(user: User) {
-        user.isBlockedBy = true
+        transaction { user.isBlockedBy = true }
         itemService.clearSubscriptions(userId = user.id.value)
         log.warn { "Blocked by $user! All subscriptions will be removed" }
     }

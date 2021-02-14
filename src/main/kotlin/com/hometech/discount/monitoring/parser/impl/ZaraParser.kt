@@ -7,17 +7,25 @@ import com.hometech.discount.monitoring.domain.model.SizeInfo
 import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.parser.Product
+import com.hometech.discount.monitoring.parser.ProxyDictionary
+import mu.KotlinLogging
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
 import java.util.regex.Pattern
 
 @Component
-class ZaraParser(private val objectMapper: ObjectMapper) : Parser {
+class ZaraParser(
+    private val objectMapper: ObjectMapper,
+    private val proxyDictionary: ProxyDictionary
+) : Parser {
+    private val log = KotlinLogging.logger {}
+
     override fun getType(): ParserType = ParserType.ZARA
 
     override fun getItemInfo(url: String): ItemInfo {
-        val document = Jsoup.connect(url).get()
+        val (host, port) = proxyDictionary.random()
+        val document = getDocumentWithRetries(url, host, port)
         val productInfo = document.toProductInfo()
         val sizeInfos = document.sizeInfos()
         return ItemInfo(
@@ -27,6 +35,19 @@ class ZaraParser(private val objectMapper: ObjectMapper) : Parser {
             priceCurrency = productInfo.offer.priceCurrency,
             additionalInfo = AdditionalInfo(sizeInfos)
         )
+    }
+
+    private fun getDocumentWithRetries(url: String, host: String, port: Int): Document {
+        // 3 retries
+        (1..3).forEach {
+            try {
+                return Jsoup.connect(url).proxy(host, port).get()
+            } catch (ex: Exception) {
+                log.error { "${ex.javaClass} for proxy = $host:$port. Retry number $it for item" }
+            }
+        }
+        log.warn { "Retrieving item info without proxy" }
+        return Jsoup.connect(url).get()
     }
 
     private fun Document?.toProductInfo(): Product {

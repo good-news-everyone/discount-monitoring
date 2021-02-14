@@ -1,6 +1,7 @@
 package com.hometech.discount.monitoring
 
 import com.hometech.discount.monitoring.domain.model.ItemInfo
+import com.hometech.discount.monitoring.parser.ProxyDictionary
 import com.hometech.discount.monitoring.parser.impl.HmParser
 import com.hometech.discount.monitoring.parser.impl.OzonParser
 import com.hometech.discount.monitoring.parser.impl.ZaraParser
@@ -12,10 +13,15 @@ class IntegrationTests : BaseIntegrationTest() {
 
     @Autowired
     lateinit var hmParser: HmParser
+
     @Autowired
     lateinit var zaraParser: ZaraParser
+
     @Autowired
     lateinit var ozonParser: OzonParser
+
+    @Autowired
+    lateinit var proxyParser: ProxyDictionary
 
     @Test
     fun checkHmAvailability() {
@@ -37,6 +43,12 @@ class IntegrationTests : BaseIntegrationTest() {
     fun checkOzonAvailability() {
         val item = ozonParser.getItemInfo("https://www.ozon.ru/context/detail/id/149090110/?tab=reviews")
         assertionsOf(item)
+    }
+
+    @Test
+    fun checkProxyParser() {
+        proxyParser.checkProxyList()
+        proxyParser.random()
     }
 
     fun assertionsOf(item: ItemInfo) {
