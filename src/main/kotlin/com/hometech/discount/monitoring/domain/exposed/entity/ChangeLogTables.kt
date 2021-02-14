@@ -74,9 +74,11 @@ enum class PriceChange(val literal: String) {
 
     companion object {
         fun resolvePriceChange(old: BigDecimal, new: BigDecimal): PriceChange {
-            if (old == new) return NONE
-            if (old < new) return UP
-            return DOWN
+            return when (old.compareTo(new)) {
+                -1 -> UP
+                1 -> DOWN
+                else -> NONE
+            }
         }
     }
 }
