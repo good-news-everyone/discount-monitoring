@@ -24,8 +24,7 @@ class ZaraParser(
     override fun getType(): ParserType = ParserType.ZARA
 
     override fun getItemInfo(url: String): ItemInfo {
-        val (host, port) = proxyDictionary.random()
-        val document = getDocumentWithRetries(url, host, port)
+        val document = getDocumentWithRetries(url)
         val productInfo = document.toProductInfo()
         val sizeInfos = document.sizeInfos()
         return ItemInfo(
@@ -37,13 +36,14 @@ class ZaraParser(
         )
     }
 
-    private fun getDocumentWithRetries(url: String, host: String, port: Int): Document {
+    private fun getDocumentWithRetries(url: String): Document {
         // 3 retries
         (1..3).forEach {
+            val (host, port) = proxyDictionary.random()
             try {
                 return Jsoup.connect(url).proxy(host, port).get()
             } catch (ex: Exception) {
-                log.error { "${ex.javaClass} for proxy = $host:$port. Retry number $it for item" }
+                log.error { "${ex.javaClass} for proxy = $host:$port. Retry #$it for item $url" }
             }
         }
         log.warn { "Retrieving item info without proxy" }
