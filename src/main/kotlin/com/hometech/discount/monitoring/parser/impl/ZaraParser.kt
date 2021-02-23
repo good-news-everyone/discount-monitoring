@@ -24,7 +24,7 @@ class ZaraParser(
     override fun getType(): ParserType = ParserType.ZARA
 
     override fun getItemInfo(url: String): ItemInfo {
-        val document = getDocumentWithRetries(url)
+        val document = Jsoup.connect(url).get()
         val productInfo = document.toProductInfo()
         val sizeInfos = document.sizeInfos()
         return ItemInfo(
@@ -36,6 +36,7 @@ class ZaraParser(
         )
     }
 
+    // до лучших времен
     private fun getDocumentWithRetries(url: String): Document {
         // 3 retries
         (1..3).forEach {
