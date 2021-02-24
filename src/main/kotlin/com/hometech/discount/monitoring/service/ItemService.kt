@@ -5,13 +5,13 @@ import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscription
 import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscriptionTable
 import com.hometech.discount.monitoring.domain.exposed.entity.ItemTable
 import com.hometech.discount.monitoring.domain.exposed.entity.User
+import com.hometech.discount.monitoring.domain.exposed.extensions.lowerCaseText
 import com.hometech.discount.monitoring.parser.ParserType
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jsoup.HttpStatusException
 import org.springframework.dao.EmptyResultDataAccessException
@@ -31,7 +31,7 @@ class ItemService(
     fun createItem(url: String, user: User): Item {
         log.debug { "user request subscription for item $url" }
         return transaction {
-            val itemByUrl = Item.find { ItemTable.url.lowerCase() eq url.toLowerCase() }.firstOrNull()
+            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.toLowerCase() }.firstOrNull()
             val item = if (itemByUrl != null) {
                 log.debug { "item already exists, creating subscription" }
                 itemByUrl
@@ -58,7 +58,7 @@ class ItemService(
 
     fun removeSubscriptionByUrl(url: String, userId: Int) {
         transaction {
-            val itemByUrl = Item.find { ItemTable.url.lowerCase() eq url.toLowerCase() }.first()
+            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.toLowerCase() }.first()
             val op = (ItemSubscriptionTable.subscriber inList listOf(userId.toLong()))
                 .and(ItemSubscriptionTable.item inList listOf(itemByUrl.id))
             val subscription = ItemSubscription.find { op }.firstOrNull()
@@ -103,7 +103,7 @@ class ItemService(
             }
             notifyService.notifyUsersAboutItemDeletion(it)
         }
-        val itemIds = notAvailableItems.mapNotNull { it.id }
+        val itemIds = notAvailableItems.map { it.id }
         transaction {
             ItemSubscriptionTable.deleteWhere { ItemSubscriptionTable.item inList itemIds }
             ItemTable.deleteWhere { ItemTable.id inList notAvailableItems.map { it.id } }
