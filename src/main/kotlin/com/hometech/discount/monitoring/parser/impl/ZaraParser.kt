@@ -1,18 +1,19 @@
 package com.hometech.discount.monitoring.parser.impl
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.hometech.discount.monitoring.common.nonNull
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.SizeInfo
 import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
-import com.hometech.discount.monitoring.parser.Product
 import com.hometech.discount.monitoring.parser.ProxyDictionary
 import mu.KotlinLogging
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
-import java.util.regex.Pattern
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Component
 class ZaraParser(
@@ -26,14 +27,21 @@ class ZaraParser(
     override fun getItemInfo(url: String): ItemInfo {
         val document = Jsoup.connect(url).get()
         val productInfo = document.toProductInfo()
-        val sizeInfos = document.sizeInfos()
         return ItemInfo(
             url = url,
-            name = productInfo.name,
-            price = productInfo.offer.price,
-            priceCurrency = productInfo.offer.priceCurrency,
-            additionalInfo = AdditionalInfo(sizeInfos)
+            name = productInfo.name(),
+            price = productInfo.price(),
+            priceCurrency = productInfo.currency(),
+            additionalInfo = AdditionalInfo(productInfo.sizes())
         )
+    }
+
+    private fun Document?.toProductInfo(): ProductParseData {
+        if (this == null) throw RuntimeException("Empty result")
+        val info = this.getElementsByAttributeValue("type", "text/javascript").first {
+            it.data().trim().startsWith(SIZES_INFO_MARKER)
+        }.data().substringAfter(PRODUCT_INFO_MARKER)
+        return objectMapper.readValue(info, ProductParseData::class.java).nonNull()
     }
 
     // до лучших времен
@@ -50,35 +58,46 @@ class ZaraParser(
         log.warn { "Retrieving item info without proxy" }
         return Jsoup.connect(url).get()
     }
-
-    private fun Document?.toProductInfo(): Product {
-        if (this == null) throw RuntimeException("Empty result")
-        val infos = this.getElementsByAttributeValue("type", "application/ld+json")
-            .firstOrNull()
-            ?.data() ?: throw RuntimeException("No info present.")
-        return objectMapper
-            .readValue(infos, Array<Product>::class.java)
-            .first()
-    }
-
-    private fun Document?.sizeInfos(): List<SizeInfo> {
-        if (this == null) throw RuntimeException("Empty result")
-        val content = this.getElementsByAttributeValue("type", "text/javascript").first {
-            it.data().trim().startsWith(SIZES_INFO_MARKER)
-        }.data()
-        val matcher = Pattern.compile(SIZES_REGEX).matcher(content)
-        matcher.find()
-        val sizesString = matcher.group().replace(SIZES_REPLACEMENT, "")
-        return (objectMapper.readValue(sizesString, List::class.java) as List<Map<String, String>>)
-            .map {
-                SizeInfo(
-                    name = requireNotNull(it["name"]),
-                    availability = it["availability"] == "in_stock"
-                )
-            }
-    }
 }
 
-private const val SIZES_REGEX = "(\"sizes\":\\[[^\\[\\]]*\\])"
 private const val SIZES_INFO_MARKER = "window.zara.appConfig"
-private const val SIZES_REPLACEMENT = "\"sizes\":"
+private const val PRODUCT_INFO_MARKER = "window.zara.viewPayload = "
+
+private data class ProductParseData(
+    val product: ProductInfo,
+    val analyticsData: AnalyticsInfo
+) {
+    fun name() = product.name
+    fun currency() = analyticsData.page.currency
+    fun price(): BigDecimal = product.detail.colors.first().price.toBigDecimal().divide(BigDecimal(100), RoundingMode.HALF_UP)
+    fun sizes() = product.detail.colors.first().sizes.map { SizeInfo(name = it.name, availability = it.isAvailable()) }
+}
+
+private data class ProductInfo(
+    val name: String,
+    val detail: ProductDetailInfo
+)
+
+private data class ProductDetailInfo(
+    val colors: List<ProductDetailColorsInfo>
+)
+
+private data class ProductDetailColorsInfo(
+    val price: Int,
+    val sizes: List<ProductSizeInfo>
+)
+
+private data class ProductSizeInfo(
+    val name: String,
+    val availability: String
+) {
+    fun isAvailable() = availability == "in_stock"
+}
+
+private data class AnalyticsInfo(
+    val page: AnalyticsPageInfo
+)
+
+private data class AnalyticsPageInfo(
+    val currency: String
+)
