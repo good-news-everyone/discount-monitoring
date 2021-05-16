@@ -2,6 +2,7 @@ package com.hometech.discount.monitoring.parser.impl
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.hometech.discount.monitoring.common.nonNull
+import com.hometech.discount.monitoring.domain.OutdatedItemException
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.SizeInfo
@@ -9,6 +10,7 @@ import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.parser.ProxyDictionary
 import mu.KotlinLogging
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
@@ -25,7 +27,11 @@ class ZaraParser(
     override fun getType(): ParserType = ParserType.ZARA
 
     override fun getItemInfo(url: String): ItemInfo {
-        val document = Jsoup.connect(url).get()
+        val document = try {
+            Jsoup.connect(url).get()
+        } catch (e: HttpStatusException) {
+            throw OutdatedItemException(url)
+        }
         val productInfo = document.toProductInfo()
         return ItemInfo(
             url = url,

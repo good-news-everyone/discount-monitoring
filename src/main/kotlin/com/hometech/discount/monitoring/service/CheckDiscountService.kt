@@ -3,6 +3,8 @@ package com.hometech.discount.monitoring.service
 import com.hometech.discount.monitoring.common.parallelMap
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.configuration.ParserResolver
+import com.hometech.discount.monitoring.domain.OutdatedItemException
+import com.hometech.discount.monitoring.domain.RemoveOutdatedItemEvent
 import com.hometech.discount.monitoring.domain.exposed.entity.Item
 import com.hometech.discount.monitoring.domain.model.AdditionalInfoLogView
 import com.hometech.discount.monitoring.domain.model.ChangeWrapper
@@ -14,6 +16,7 @@ import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.util.concurrent.TimeUnit
@@ -23,6 +26,7 @@ import java.util.concurrent.TimeUnit
 class CheckDiscountService(
     private val parserResolver: ParserResolver,
     private val notifyService: NotifyService,
+    private val applicationEventPublisher: ApplicationEventPublisher,
     applicationProperties: ApplicationProperties
 ) {
     private val coroutineDispatcher = newFixedThreadPoolContext(
@@ -50,8 +54,8 @@ class CheckDiscountService(
                 val changeWrapper = try {
                     recheckItem(it)
                 } catch (e: Exception) {
+                    if (e is OutdatedItemException) applicationEventPublisher.publishEvent(RemoveOutdatedItemEvent(it))
                     log.error { "Error occurred while parsing item info $it. Error: ${e.javaClass} ${e.message}" }
-                    log.trace { e.printStackTrace() }
                     null
                 } ?: return@parallelMap ItemChangeWrapper(it, null)
                 transaction {

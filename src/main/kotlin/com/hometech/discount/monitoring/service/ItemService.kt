@@ -1,5 +1,6 @@
 package com.hometech.discount.monitoring.service
 
+import com.hometech.discount.monitoring.domain.RemoveOutdatedItemEvent
 import com.hometech.discount.monitoring.domain.exposed.entity.Item
 import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscription
 import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscriptionTable
@@ -14,10 +15,10 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jsoup.HttpStatusException
+import org.springframework.context.event.EventListener
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @ObsoleteCoroutinesApi
 @Service
@@ -82,8 +83,16 @@ class ItemService(
         }
     }
 
+    @EventListener
+    fun removeOutdatedItem(event: RemoveOutdatedItemEvent) {
+        notifyService.notifyUsersAboutItemDeletion(event.item)
+        transaction {
+            ItemSubscriptionTable.deleteWhere { ItemSubscriptionTable.item eq event.item.id }
+            ItemTable.deleteWhere { ItemTable.id eq event.item.id }
+        }
+    }
+
     @ObsoleteCoroutinesApi
-    @Transactional
     @Scheduled(cron = "0 0 23 * * *")
     fun cleanUpItems() {
         val notAvailableItems = transaction {

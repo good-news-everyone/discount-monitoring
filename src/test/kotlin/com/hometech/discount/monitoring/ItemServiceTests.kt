@@ -1,5 +1,6 @@
 package com.hometech.discount.monitoring
 
+import com.hometech.discount.monitoring.domain.RemoveOutdatedItemEvent
 import com.hometech.discount.monitoring.domain.exposed.entity.Item
 import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscription
 import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscriptionTable
@@ -8,6 +9,8 @@ import com.hometech.discount.monitoring.domain.exposed.entity.User
 import com.hometech.discount.monitoring.domain.exposed.entity.UserTable
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.helper.ZARA_URL
+import com.hometech.discount.monitoring.helper.createRelations
+import com.hometech.discount.monitoring.helper.randomItem
 import com.hometech.discount.monitoring.helper.randomItemInfo
 import com.hometech.discount.monitoring.helper.randomUser
 import com.hometech.discount.monitoring.helper.shouldBeEqualsIgnoreScale
@@ -16,6 +19,7 @@ import com.hometech.discount.monitoring.service.CheckDiscountService
 import com.hometech.discount.monitoring.service.ItemService
 import com.hometech.discount.monitoring.service.NotifyService
 import com.ninjasquad.springmockk.MockkBean
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
@@ -156,6 +160,22 @@ class ItemServiceTests : BaseIntegrationTest() {
             val items = User.findById(firstSubscriber.id.value).shouldNotBeNull().items
             items.count().shouldBe(1)
             checkItem(items.first(), info1)
+        }
+    }
+
+    @Test
+    fun `should remove outdated zara item`() {
+        val item = transaction {
+            val item = randomItem()
+            val user = randomUser()
+            createRelations(user, item)
+            item
+        }
+        every { notifyService.notifyUsersAboutItemDeletion(any()) } just Runs
+        itemService.removeOutdatedItem(RemoveOutdatedItemEvent(item))
+        transaction {
+            Item.all().shouldBeEmpty()
+            ItemSubscription.all().shouldBeEmpty()
         }
     }
 
