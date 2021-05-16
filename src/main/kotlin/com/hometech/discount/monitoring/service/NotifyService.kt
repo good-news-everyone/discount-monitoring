@@ -61,13 +61,15 @@ class NotifyService(
     }
 
     fun notifyUsersAboutItemDeletion(item: Item) {
-        transaction { item.subscribers }.forEach {
-            val message = """
+        transaction {
+            item.subscribers.forEach {
+                val message = """
                 $ITEM_NOT_AVAILABLE_MESSAGE
                 ${item.url}
             """.trimIndent()
-            sendMessage(it, message)
-            saveMessage(it, message)
+                sendMessage(it, message)
+                saveMessage(it, message)
+            }
         }
     }
 
