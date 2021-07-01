@@ -9,7 +9,7 @@ import org.telegram.telegrambots.meta.api.objects.Message as TelegramMessage
 object UserTable : LongIdTable("users") {
     val firstName = text("first_name").nullable()
     val lastName = text("last_name").nullable()
-    val userName = text("user_name")
+    val userName = text("user_name").nullable()
     val isBot = bool("is_bot")
     val isBlockedBy = bool("is_blocked_by").nullable()
     val chatId = long("chat_id")

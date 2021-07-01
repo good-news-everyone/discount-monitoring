@@ -1,4 +1,4 @@
-val detektVersion: String by project
+﻿val detektVersion: String by project
 val ktlintVersion: String by project
 val kotlinLoggingVersion: String by project
 val testcontainersVersion: String by project

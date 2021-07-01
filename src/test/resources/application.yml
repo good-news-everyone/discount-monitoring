@@ -2,7 +2,7 @@ spring:
   application:
     name: discount-monitoring
   datasource:
-    url: jdbc:tc:postgresql:11://hostname:5432/postgres?TC_TMPFS=/testtmpfs:rw
+    url: jdbc:tc:postgresql:12://hostname:5432/postgres?TC_TMPFS=/testtmpfs:rw
   flyway:
     enabled: true
     baseline-on-migrate: true
