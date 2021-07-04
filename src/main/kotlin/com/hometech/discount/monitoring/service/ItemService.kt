@@ -32,7 +32,7 @@ class ItemService(
     fun createItem(url: String, user: User): Item {
         log.debug { "user request subscription for item $url" }
         return transaction {
-            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.toLowerCase() }.firstOrNull()
+            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.lowercase() }.firstOrNull()
             val item = if (itemByUrl != null) {
                 log.debug { "item already exists, creating subscription" }
                 itemByUrl
@@ -57,10 +57,10 @@ class ItemService(
             }
     }
 
-    fun removeSubscriptionByUrl(url: String, userId: Int) {
+    fun removeSubscriptionByUrl(url: String, userId: Long) {
         transaction {
-            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.toLowerCase() }.first()
-            val op = (ItemSubscriptionTable.subscriber inList listOf(userId.toLong()))
+            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.lowercase() }.first()
+            val op = (ItemSubscriptionTable.subscriber inList listOf(userId))
                 .and(ItemSubscriptionTable.item inList listOf(itemByUrl.id))
             val subscription = ItemSubscription.find { op }.firstOrNull()
             if (subscription != null) {
@@ -68,7 +68,7 @@ class ItemService(
             } else {
                 throw EmptyResultDataAccessException(1)
             }
-            if (itemByUrl.subscribers.empty()) itemByUrl.delete()
+            if (ItemSubscription.findByItem(itemByUrl.id.value).empty()) itemByUrl.delete()
         }
     }
 
@@ -78,7 +78,7 @@ class ItemService(
             ItemSubscription.find { ItemSubscriptionTable.subscriber eq user.id }.forEach {
                 val item = it.item
                 it.delete()
-                if (item.subscribers.empty()) item.delete()
+                if (ItemSubscription.findByItem(item.id.value).empty()) item.delete()
             }
         }
     }

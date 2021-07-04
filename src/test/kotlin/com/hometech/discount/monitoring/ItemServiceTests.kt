@@ -110,7 +110,7 @@ class ItemServiceTests : BaseIntegrationTest() {
         val firstSubscriber = transaction { randomUser() }
 
         itemService.createItem(ZARA_URL, firstSubscriber)
-        itemService.removeSubscriptionByUrl(ZARA_URL, firstSubscriber.id.value.toInt())
+        itemService.removeSubscriptionByUrl(ZARA_URL, firstSubscriber.id.value)
 
         transaction {
             Item.all().count().shouldBe(0)
@@ -130,7 +130,7 @@ class ItemServiceTests : BaseIntegrationTest() {
         itemService.createItem(ZARA_URL, firstSubscriber)
         itemService.createItem(ZARA_URL, secondSubscriber)
 
-        itemService.removeSubscriptionByUrl(ZARA_URL, firstSubscriber.id.value.toInt())
+        itemService.removeSubscriptionByUrl(ZARA_URL, firstSubscriber.id.value)
 
         transaction {
             Item.all().count().shouldBe(1)

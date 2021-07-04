@@ -1,17 +1,21 @@
 package com.hometech.discount.monitoring.service
 
+import com.hometech.discount.monitoring.common.nonNull
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.exposed.entity.Item
+import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscription
 import com.hometech.discount.monitoring.domain.exposed.entity.Message
 import com.hometech.discount.monitoring.domain.exposed.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.exposed.entity.PriceChange
 import com.hometech.discount.monitoring.domain.exposed.entity.User
-import com.hometech.discount.monitoring.domain.model.AdditionalInfoLogView
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
 import com.hometech.discount.monitoring.domain.model.PriceLogView
+import com.hometech.discount.monitoring.domain.model.SizeInfo
+import com.hometech.discount.monitoring.domain.model.toAvailabilityMessage
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
+import org.jetbrains.exposed.dao.with
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpEntity
@@ -43,42 +47,61 @@ class NotifyService(
 
     @Async
     fun notifyUsers(notifyingItems: List<ItemChangeWrapper>) {
-        notifyingItems
+        val items = notifyingItems
             .filter { it.itemChange != null && it.isItemChanged() }
-            .forEach { wrapper ->
-                transaction { wrapper.item.subscribers.toList() }
-                    .forEach {
-                        try {
-                            val messageBody = buildMessage(wrapper)
-                            sendMessage(it, messageBody)
-                            transaction { saveMessage(it, messageBody) }
-                        } catch (ex: HttpClientErrorException) {
-                            log.error { ex }
-                            if (ex.statusCode == HttpStatus.FORBIDDEN) setBlockedBy(it)
-                        }
-                    }
+            .associateBy { it.item.id.value }
+        val itemToSubscription = transaction {
+            ItemSubscription.findByItems(items.keys)
+                .with(ItemSubscription::subscriber, ItemSubscription::item)
+                .groupBy({ it.item.id.value }, { it })
+        }
+        items.values.forEach { wrapper ->
+            itemToSubscription[wrapper.item.id.value]
+                .nonNull()
+                .forEach { sendNotification(wrapper, it) }
+        }
+    }
+
+    private fun sendNotification(wrapper: ItemChangeWrapper, subscription: ItemSubscription) {
+        try {
+            val difference = wrapper.changesFromSubscription(subscription.metadata)
+            if (difference.isNotEmpty() || wrapper.isPriceChanged()) {
+                val messageBody = buildMessage(wrapper, difference)
+                transaction {
+                    val user = subscription.subscriber
+                    sendMessage(user, messageBody)
+                    saveMessage(user, messageBody)
+                }
             }
+        } catch (ex: HttpClientErrorException) {
+            log.error { ex }
+            if (ex.statusCode == HttpStatus.FORBIDDEN) {
+                transaction { setBlockedBy(subscription.subscriber) }
+            }
+        }
     }
 
     fun notifyUsersAboutItemDeletion(item: Item) {
         transaction {
-            item.subscribers.forEach {
+            ItemSubscription.findByItems(listOf(item.id.value)).forEach {
                 val message = """
                 $ITEM_NOT_AVAILABLE_MESSAGE
                 ${item.url}
-            """.trimIndent()
-                sendMessage(it, message)
-                saveMessage(it, message)
+                """.trimIndent()
+                sendMessage(it.subscriber, message)
+                saveMessage(it.subscriber, message)
             }
         }
     }
 
     fun sendMessageToAllUsers(message: String) {
-        User.findAll().forEach { sendMessage(it, message) }
+        transaction { User.findAll().forEach { sendMessage(it, message) } }
     }
 
     fun sendMessageToUser(userId: Int, message: String) {
-        val user = User.findById(userId.toLong()) ?: throw NoSuchElementException("User with id = $userId not found")
+        val user = transaction {
+            User.findById(userId.toLong()) ?: throw NoSuchElementException("User with id = $userId not found")
+        }
         sendMessage(user, message)
     }
 
@@ -112,10 +135,10 @@ class NotifyService(
         }
     }
 
-    private fun buildMessage(wrapper: ItemChangeWrapper): String {
+    private fun buildMessage(wrapper: ItemChangeWrapper, difference: List<SizeInfo>): String {
         return listOf(
             messageOnPriceChange(wrapper.item, requireNotNull(wrapper.itemChange?.priceLog)),
-            messageOnAdditionalInfoChange(requireNotNull(wrapper.itemChange?.additionalInfoLog)),
+            messageOnAdditionalInfoChange(difference),
             wrapper.item.url
         )
             .filter { it.isNotEmpty() }
@@ -130,9 +153,9 @@ class NotifyService(
             .trimMargin()
     }
 
-    private fun messageOnAdditionalInfoChange(additionalInfoChange: AdditionalInfoLogView): String {
-        if (additionalInfoChange.infoBefore == additionalInfoChange.infoNow) return ""
-        return additionalInfoChange.difference()
+    private fun messageOnAdditionalInfoChange(difference: List<SizeInfo>): String {
+        if (difference.isEmpty()) return ""
+        return difference.toAvailabilityMessage()
     }
 
     private fun calculatePercentage(now: BigDecimal, before: BigDecimal): BigDecimal {

@@ -1,7 +1,7 @@
-package com.hometech.discount.monitoring.domain.entity.exposed
+package com.hometech.discount.monitoring.domain.exposed.extensions
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import mu.KotlinLogging
@@ -22,7 +22,7 @@ private val logger = KotlinLogging.logger { }
 private val objectMapper = jacksonObjectMapper().apply {
     this.findAndRegisterModules()
     this.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-    this.propertyNamingStrategy = PropertyNamingStrategy.SNAKE_CASE
+    this.propertyNamingStrategy = PropertyNamingStrategies.SNAKE_CASE
 }
 
 fun <T : Any> Table.jsonb(

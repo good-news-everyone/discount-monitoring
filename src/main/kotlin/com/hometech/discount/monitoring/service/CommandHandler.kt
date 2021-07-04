@@ -30,13 +30,13 @@ class CommandHandler(private val itemService: ItemService) {
         return ParserType.allShops.joinToString(separator = "\n")
     }
 
-    private fun goods(userId: Int): String {
+    private fun goods(userId: Long): String {
         return transaction {
-            User.findById(userId.toLong())?.items?.joinToString(separator = "\n") { it.asString() } ?: ""
+            User.findById(userId)?.items?.joinToString(separator = "\n") { it.asString() } ?: ""
         }
     }
 
-    private fun unsubscribe(url: String, userId: Int): String {
+    private fun unsubscribe(url: String, userId: Long): String {
         return try {
             transaction { itemService.removeSubscriptionByUrl(url, userId) }
             SUCCESS
@@ -45,13 +45,13 @@ class CommandHandler(private val itemService: ItemService) {
         }
     }
 
-    private fun unsubscribeAll(userId: Int): String {
-        transaction { itemService.clearSubscriptions(userId.toLong()) }
+    private fun unsubscribeAll(userId: Long): String {
+        transaction { itemService.clearSubscriptions(userId) }
         return SUCCESS
     }
 
     private fun Item.asString(): String = "\uD83D\uDCB8 ${this.name}, ${this.url}"
-    private fun Update.userId(): Int = this.message.from.id
+    private fun Update.userId(): Long = this.message.from.id
 
     companion object {
         val welcomeMessage = """Привет! Меня зовут Бот.
@@ -61,7 +61,7 @@ class CommandHandler(private val itemService: ItemService) {
             | В противном же случае, я скажу, что у меня не получилось отследить товар.
             | 📌 Чтобы еще раз прочитать это сообщение, просто вызови команду '/help'
             | 📌 Чтобы увидеть список доступных магазинов, введи команду '/shops'
-            | 📌 Чтобы увидеть увидеть товары, на которые ты подписан, введи '/goods'
+            | 📌 Чтобы увидеть товары, на которые ты подписан, введи '/goods'
             | 📌 Чтобы отписаться от товара, просто введи '/unsubscribe https://some-shop.com/item123'
             | 📌 Чтобы отписаться от всех товаров, введи '/unsubscribe_all'
         """.trimMargin()

@@ -39,7 +39,7 @@ class CheckDiscountService(
         return parserResolver.findByUrl(url).getItemInfo(url)
     }
 
-    @Scheduled(fixedDelay = 2 * 1000 * 60) // раз в 2 минуты запускаем джобу по обновлению товаров
+    @Scheduled(fixedDelay = 2L * 1000 * 60) // раз в 2 минуты запускаем джобу по обновлению товаров
     fun recheckAllItems() {
         val recheckedItems = measureExecution {
             runBlocking(context = coroutineDispatcher) { recheckAll() }
@@ -73,8 +73,8 @@ class CheckDiscountService(
     private fun saveLogs(recheckedItems: List<ItemChangeWrapper>) {
         recheckedItems.forEach {
             if (it.itemChange != null) {
-                if (it.itemChange.priceLog.hasChanges()) it.itemChange.priceLog.createEntity()
-                if (it.itemChange.additionalInfoLog.hasChanges()) it.itemChange.additionalInfoLog.createEntity()
+                if (it.isPriceChanged()) it.itemChange.priceLog.createEntity()
+                if (it.isAdditionalInfoChanged()) it.itemChange.additionalInfoLog.createEntity()
             }
         }
     }

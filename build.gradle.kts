@@ -15,6 +15,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
     id("org.jlleitschuh.gradle.ktlint")
     id("com.google.cloud.tools.jib")
+    id("com.github.ben-manes.versions")
     id("com.gorylenko.gradle-git-properties")
 
     kotlin("jvm")

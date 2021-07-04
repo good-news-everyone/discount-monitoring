@@ -4,7 +4,9 @@ import com.hometech.discount.monitoring.domain.exposed.extensions.NamedEntityCla
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.LongIdTable
+import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.Message as TelegramMessage
+import org.telegram.telegrambots.meta.api.objects.User as TelegramUser
 
 object UserTable : LongIdTable("users") {
     val firstName = text("first_name").nullable()
@@ -19,16 +21,25 @@ object UserTable : LongIdTable("users") {
 class User(id: EntityID<Long>) : LongEntity(id) {
     companion object : NamedEntityClass<User>(UserTable, "Telegram user info") {
 
-        fun findByMessageOrCreateIfNone(message: TelegramMessage): User {
-            val id = message.from.id.toLong()
-            return findById(id) ?: User.new(id = id) {
-                chatId = message.chat.id
-                firstName = message.from.firstName
-                isBot = message.from.isBot
-                lastName = message.from.lastName
-                userName = message.from.userName
-                isBlockedBy = false
-                contact = message.contact?.phoneNumber
+        fun findByUpdateOrCreate(update: Update): User {
+            val from = if (update.hasMessage()) update.message.from else update.callbackQuery.from
+            val chatId = if (update.hasMessage()) update.message.chatId else update.callbackQuery.message.chatId
+            return findByFromOrCreate(from, chatId, update.message?.contact?.phoneNumber)
+        }
+
+        fun findByFromOrCreate(
+            from: TelegramUser,
+            chatId: Long,
+            contact: String? = null
+        ): User {
+            return findById(from.id) ?: User.new(id = from.id) {
+                this.chatId = chatId
+                this.firstName = from.firstName
+                this.isBot = from.isBot
+                this.lastName = from.lastName
+                this.userName = from.userName
+                this.isBlockedBy = false
+                this.contact = contact
             }
         }
 
@@ -53,5 +64,5 @@ class User(id: EntityID<Long>) : LongEntity(id) {
 }
 
 fun TelegramMessage.getUser(): User {
-    return User.findByMessageOrCreateIfNone(this)
+    return User.findByFromOrCreate(this.from, this.chatId)
 }

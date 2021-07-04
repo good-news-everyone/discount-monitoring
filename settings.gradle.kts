@@ -6,6 +6,7 @@ pluginManagement {
     val ktlintPluginVersion: String by settings
     val detektVersion: String by settings
     val gitPropertiesVersion: String by settings
+    val versionsVersion: String by settings
 
     plugins {
         id("org.springframework.boot") version springBootVersion
@@ -13,6 +14,7 @@ pluginManagement {
         id("com.google.cloud.tools.jib") version jibVersion
         id("org.jlleitschuh.gradle.ktlint") version ktlintPluginVersion
         id("io.gitlab.arturbosch.detekt") version detektVersion
+        id("com.github.ben-manes.versions") version versionsVersion
         id("com.gorylenko.gradle-git-properties") version gitPropertiesVersion
 
         kotlin("plugin.spring") version kotlinVersion

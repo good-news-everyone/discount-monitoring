@@ -10,6 +10,7 @@ import com.hometech.discount.monitoring.helper.ZARA_URL
 import com.hometech.discount.monitoring.helper.createRelations
 import com.hometech.discount.monitoring.helper.randomInt
 import com.hometech.discount.monitoring.helper.randomItem
+import com.hometech.discount.monitoring.helper.randomLong
 import com.hometech.discount.monitoring.helper.randomString
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.service.CommandHandler
@@ -130,7 +131,7 @@ class CommandHandlerTests : BaseIntegrationTest() {
             this.lastName = randomString()
             this.isBot = false
             this.userName = randomString()
-            this.id = randomInt().absoluteValue
+            this.id = randomLong().absoluteValue
         }
         val message = Message().apply {
             this.contact = contact

@@ -1,16 +1,37 @@
 package com.hometech.discount.monitoring.domain.model
 
+import com.hometech.discount.monitoring.common.nonNull
 import com.hometech.discount.monitoring.domain.exposed.entity.AdditionalInfoLog
 import com.hometech.discount.monitoring.domain.exposed.entity.Item
 import com.hometech.discount.monitoring.domain.exposed.entity.PriceChange
 import com.hometech.discount.monitoring.domain.exposed.entity.PriceChangeLog
+import com.hometech.discount.monitoring.domain.exposed.entity.SubscriptionMetadata
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 data class ItemChangeWrapper(val item: Item, val itemChange: ChangeWrapper?) {
     fun isItemChanged(): Boolean {
-        return itemChange?.priceLog?.priceChange != PriceChange.NONE ||
-            itemChange.additionalInfoLog.infoNow != itemChange.additionalInfoLog.infoBefore
+        return isPriceChanged() || isAdditionalInfoChanged()
+    }
+
+    fun isPriceChanged() = itemChange?.priceLog?.hasChanges() ?: false
+    fun isAdditionalInfoChanged() = itemChange?.additionalInfoLog?.infoNow != itemChange?.additionalInfoLog?.infoBefore
+
+    fun changesFromSubscription(subscriptionMetadata: SubscriptionMetadata?): List<SizeInfo> {
+        val difference = difference().associateBy { it.name }
+        return if (subscriptionMetadata?.sizes != null && subscriptionMetadata.sizes.isNotEmpty()) {
+            subscriptionMetadata.sizes.mapNotNull { difference[it] }
+        } else difference.values.toList()
+    }
+
+    private fun difference(): List<SizeInfo> {
+        return if (this.isItemChanged() && isAdditionalInfoChanged()) {
+            val infoBefore = this.itemChange?.additionalInfoLog?.infoBefore ?: AdditionalInfo(listOf())
+            val infoNow = this.itemChange?.additionalInfoLog?.infoNow ?: AdditionalInfo(listOf())
+            infoNow.sizes.nonNull().mapNotNull {
+                if (infoBefore.sizes.nonNull().first { size -> it.name == size.name } != it) it else null
+            }
+        } else listOf()
     }
 }
 
@@ -42,25 +63,6 @@ class AdditionalInfoLogView(
     val infoBefore: AdditionalInfo,
     val infoNow: AdditionalInfo
 ) {
-    fun difference(): String {
-        return if (infoBefore.sizes != null || infoNow.sizes != null) {
-            val sizesBefore = infoBefore.sizes?.associateBy { it.name } ?: mapOf()
-            val sizesNow = infoNow.sizes?.associateBy { it.name } ?: mapOf()
-            sizesNow.entries.mapNotNull {
-                if (it.value.availability != sizesBefore[it.key]?.availability) {
-                    it.value.availabilityMessage()
-                } else null
-            }.joinToString(separator = "\n")
-        } else ""
-    }
-
-    private fun SizeInfo.availabilityMessage(): String {
-        return if (this.availability)
-            "Размер ${this.name} появился в наличии!"
-        else "Размера ${this.name} больше нет в наличии!"
-    }
-
-    fun hasChanges(): Boolean = infoBefore != infoNow
 
     fun createEntity(): AdditionalInfoLog {
         val view = this
@@ -71,4 +73,12 @@ class AdditionalInfoLogView(
             this.timeChecked = LocalDateTime.now()
         }
     }
+}
+
+fun List<SizeInfo>.toAvailabilityMessage() = this.joinToString(separator = "\n") { it.availabilityMessage() }
+
+private fun SizeInfo.availabilityMessage(): String {
+    return if (this.availability)
+        "Размер ${this.name} появился в наличии!"
+    else "Размера ${this.name} больше нет в наличии!"
 }
