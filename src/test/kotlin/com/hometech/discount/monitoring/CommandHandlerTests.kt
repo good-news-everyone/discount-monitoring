@@ -14,7 +14,7 @@ import com.hometech.discount.monitoring.helper.randomLong
 import com.hometech.discount.monitoring.helper.randomString
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.service.CommandHandler
-import com.hometech.discount.monitoring.service.CommandHandler.Companion.SUCCESS
+import com.hometech.discount.monitoring.service.CommandHandler.Companion.SUCCESS_COMMAND_REPLY
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -48,21 +48,21 @@ class CommandHandlerTests : BaseIntegrationTest() {
     @Test
     fun `should return welcome message`() {
         val help = createUpdate("/help")
-        commandHandler.handleCommand(help).shouldBe(CommandHandler.welcomeMessage)
+        commandHandler.handleCommand(help).message.shouldBe(CommandHandler.welcomeMessage)
         val start = createUpdate("/start")
-        commandHandler.handleCommand(start).shouldBe(CommandHandler.welcomeMessage)
+        commandHandler.handleCommand(start).message.shouldBe(CommandHandler.welcomeMessage)
     }
 
     @Test
     fun `should return shops`() {
         val update = createUpdate("/shops")
-        commandHandler.handleCommand(update).shouldBe(ParserType.allShops.joinToString(separator = "\n"))
+        commandHandler.handleCommand(update).message.shouldBe(ParserType.allShops.joinToString(separator = "\n"))
     }
 
     @Test
     fun `should not handle invalid command`() {
         val update = createUpdate("this is wrong command")
-        commandHandler.handleCommand(update).shouldBe(CommandHandler.BAD_COMMAND)
+        commandHandler.handleCommand(update).message.shouldBe(CommandHandler.BAD_COMMAND_REPLY)
     }
 
     @Test
@@ -77,29 +77,8 @@ class CommandHandlerTests : BaseIntegrationTest() {
 
         val goods = commandHandler.handleCommand(update)
 
-        goods.shouldContain(item.name)
-        goods.shouldContain(item.url)
-    }
-
-    @Test
-    fun `should unsubscribe single item`() {
-        val update = transaction {
-            val item1 = randomItem()
-            val item2 = randomItem(url = "$ZARA_URL/another")
-            val update = createUpdate("/unsubscribe ${item1.url}")
-            val user = update.message.getUser()
-
-            createRelations(user, item1)
-            createRelations(user, item2)
-            update
-        }
-
-        commandHandler.handleCommand(update).shouldBe(SUCCESS)
-
-        transaction {
-            Item.count().shouldBe(1)
-            ItemSubscription.count().shouldBe(1)
-        }
+        goods.message.shouldContain(item.name)
+        goods.message.shouldContain(item.url)
     }
 
     @Test
@@ -115,7 +94,7 @@ class CommandHandlerTests : BaseIntegrationTest() {
             update
         }
 
-        commandHandler.handleCommand(update).shouldBe(SUCCESS)
+        commandHandler.handleCommand(update).message.shouldBe(SUCCESS_COMMAND_REPLY)
         transaction {
             Item.count().shouldBe(0)
             ItemSubscription.count().shouldBe(0)

@@ -57,18 +57,18 @@ class ItemService(
             }
     }
 
-    fun removeSubscriptionByUrl(url: String, userId: Long) {
+    fun removeSubscriptionById(subscriptionId: Long) {
         transaction {
-            val itemByUrl = Item.find { ItemTable.url.lowerCaseText() eq url.lowercase() }.first()
-            val op = (ItemSubscriptionTable.subscriber inList listOf(userId))
-                .and(ItemSubscriptionTable.item inList listOf(itemByUrl.id))
-            val subscription = ItemSubscription.find { op }.firstOrNull()
-            if (subscription != null) {
-                subscription.delete()
+            val found = ItemSubscription.find { ItemSubscriptionTable.id eq subscriptionId }.firstOrNull()
+            if (found != null) {
+                ItemSubscriptionTable.deleteWhere { ItemSubscriptionTable.id eq subscriptionId }
             } else {
                 throw EmptyResultDataAccessException(1)
             }
-            if (ItemSubscription.findByItem(itemByUrl.id.value).empty()) itemByUrl.delete()
+            val itemId = found.item.id.value
+            if (ItemSubscription.findByItem(itemId).empty()) {
+                ItemTable.deleteWhere { ItemTable.id eq itemId }
+            }
         }
     }
 

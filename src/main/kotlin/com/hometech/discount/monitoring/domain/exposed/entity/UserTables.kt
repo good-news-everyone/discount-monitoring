@@ -32,7 +32,7 @@ class User(id: EntityID<Long>) : LongEntity(id) {
             chatId: Long,
             contact: String? = null
         ): User {
-            return findById(from.id) ?: User.new(id = from.id) {
+            return findById(from.id)?.apply { this.isBlockedBy = false } ?: User.new(id = from.id) {
                 this.chatId = chatId
                 this.firstName = from.firstName
                 this.isBot = from.isBot

@@ -109,8 +109,9 @@ class ItemServiceTests : BaseIntegrationTest() {
         every { checkDiscountService.parseItemInfo(ZARA_URL) } returns info
         val firstSubscriber = transaction { randomUser() }
 
-        itemService.createItem(ZARA_URL, firstSubscriber)
-        itemService.removeSubscriptionByUrl(ZARA_URL, firstSubscriber.id.value)
+        val item = itemService.createItem(ZARA_URL, firstSubscriber)
+        val subscription = transaction { ItemSubscription.findByItem(item.id.value).first().id.value }
+        itemService.removeSubscriptionById(subscription)
 
         transaction {
             Item.all().count().shouldBe(0)
@@ -127,10 +128,11 @@ class ItemServiceTests : BaseIntegrationTest() {
             Pair(randomUser(), randomUser())
         }
 
-        itemService.createItem(ZARA_URL, firstSubscriber)
+        val item = itemService.createItem(ZARA_URL, firstSubscriber)
         itemService.createItem(ZARA_URL, secondSubscriber)
+        val subscription = transaction { ItemSubscription.findByItem(item.id.value).first().id.value }
 
-        itemService.removeSubscriptionByUrl(ZARA_URL, firstSubscriber.id.value)
+        itemService.removeSubscriptionById(subscription)
 
         transaction {
             Item.all().count().shouldBe(1)

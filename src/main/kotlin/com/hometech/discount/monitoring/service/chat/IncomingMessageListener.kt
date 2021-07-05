@@ -1,16 +1,9 @@
-package com.hometech.discount.monitoring.service
+package com.hometech.discount.monitoring.service.chat
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.hometech.discount.monitoring.common.nonNull
 import com.hometech.discount.monitoring.configuration.ApplicationProperties
-import com.hometech.discount.monitoring.domain.exposed.entity.ItemSubscription
 import com.hometech.discount.monitoring.domain.exposed.entity.Message
 import com.hometech.discount.monitoring.domain.exposed.entity.MessageDirection
-import com.hometech.discount.monitoring.domain.exposed.entity.SubscriptionMetadata
 import com.hometech.discount.monitoring.domain.exposed.entity.User
-import com.hometech.discount.monitoring.domain.model.SizeInfo
-import com.hometech.discount.monitoring.domain.model.SubscriptionForSize
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -19,9 +12,7 @@ import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import java.time.LocalDateTime
 import org.telegram.telegrambots.meta.api.objects.Message as TelegramMessage
 
@@ -32,7 +23,8 @@ class IncomingMessageListener(
     private val applicationProperties: ApplicationProperties,
     private val itemService: ItemService,
     private val commandHandler: CommandHandler,
-    private val objectMapper: ObjectMapper
+    private val keyboardProvider: KeyboardProvider,
+    private val callbackHandler: CallbackHandler
 ) : TelegramLongPollingBot() {
 
     private val logger = KotlinLogging.logger { }
@@ -52,27 +44,22 @@ class IncomingMessageListener(
         when (update.message.messageType()) {
             MessageType.URL -> handleUrl(update, user)
             MessageType.COMMAND -> handleCommand(update)
-            else -> reply(update.chatId(), "В сообщении нет ссылки или команды :(")
+            else -> {
+                reply(
+                    chatId = update.chatId(),
+                    message = BAD_COMMAND_MESSAGE,
+                    replyMarkup = keyboardProvider.baseCommands
+                )
+            }
         }
         saveMessage(update, user)
     }
 
     private fun handleCallback(update: Update) {
-        val request = update.callbackQuery.data.asObject<SubscriptionForSize>()
-        val subscribedSizes = transaction {
-            ItemSubscription.findByItemAndUser(
-                itemId = request.itemId,
-                userId = update.callbackQuery.from.id
-            ).apply {
-                val sizes = this.metadata?.sizes ?: listOf()
-                if (sizes.contains(request.sizeName).not()) {
-                    this.metadata = SubscriptionMetadata(sizes = sizes + request.sizeName)
-                }
-            }.metadata.nonNull().sizes ?: listOf()
-        }
+        val message = callbackHandler.handleCallback(update)
         reply(
             chatId = update.chatId(),
-            message = "Принято! Теперь отслеживаем только эти размеры: \n${subscribedSizes.joinToString("\n")}"
+            message = message
         )
     }
 
@@ -80,23 +67,23 @@ class IncomingMessageListener(
         val chatId = update.chatId()
         try {
             val item = itemService.createItem(update.message.text, user)
-            val text = if (item.additionalInfo.sizes.isNullOrEmpty()) "Запрос принят! Мы оповестим о изменении цены."
-            else "Запрос принят! Мы оповестим о изменении цены. \nХотите отслеживать что-то конкретное?"
+            val text = if (item.additionalInfo.sizes.isNullOrEmpty()) REQUEST_ACCEPT_MESSAGE
+            else "$REQUEST_ACCEPT_MESSAGE. \n$CHOOSE_SOMETHING_MESSAGE"
             reply(
                 chatId = chatId,
                 message = text,
-                replyMarkup = item.additionalInfo.sizes?.toButtons(itemId = item.id.value)
+                replyMarkup = item.additionalInfo.sizes?.let { keyboardProvider.asButtons(item.id.value, it) }
             )
         } catch (e: Exception) {
             logger.error {
-                reply(chatId, "Что то пошло не так :(")
+                reply(chatId = chatId, message = SOMETHING_WRONG_MESSAGE)
             }
         }
     }
 
     private fun handleCommand(update: Update) {
-        val message = commandHandler.handleCommand(update)
-        reply(update.chatId(), message)
+        val data = commandHandler.handleCommand(update)
+        reply(chatId = update.chatId(), message = data.message, replyMarkup = data.replyKeyboard)
     }
 
     private fun reply(
@@ -123,19 +110,6 @@ class IncomingMessageListener(
         }
     }
 
-    private fun List<SizeInfo>.toButtons(itemId: Long): InlineKeyboardMarkup {
-        val buttons = this.map {
-            val row = InlineKeyboardButton().apply {
-                this.text = it.name
-                this.callbackData = SubscriptionForSize(sizeName = it.name, itemId = itemId).asJson()
-            }
-            listOf(row)
-        }
-        return InlineKeyboardMarkup().apply {
-            this.keyboard = buttons
-        }
-    }
-
     private fun TelegramMessage.messageType(): MessageType {
         if (this.text.isCommand()) return MessageType.COMMAND
         if (this.isUrl()) return MessageType.URL
@@ -155,13 +129,12 @@ class IncomingMessageListener(
         else this.callbackQuery.message.chatId.toString()
     }
 
-    fun Any.asJson(): String = objectMapper.writeValueAsString(this)
-
-    private inline fun <reified T> String.asObject(): T {
-        return objectMapper.readValue(this)
-    }
-
     enum class MessageType {
         URL, COMMAND, TRASH
     }
 }
+
+private const val BAD_COMMAND_MESSAGE = "В сообщении нет ссылки или команды 💩"
+private const val SOMETHING_WRONG_MESSAGE = "Что то пошло не так 💩"
+private const val REQUEST_ACCEPT_MESSAGE = "Запрос принят! Мы оповестим о изменении цены."
+private const val CHOOSE_SOMETHING_MESSAGE = "Хотите отслеживать что-то конкретное?"
