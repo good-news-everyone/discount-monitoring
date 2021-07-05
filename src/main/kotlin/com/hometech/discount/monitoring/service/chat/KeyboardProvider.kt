@@ -39,7 +39,7 @@ class KeyboardProvider(private val objectMapper: ObjectMapper) {
                     val subscriptionId = it[ItemSubscriptionTable.id].value
                     val item = Item.wrapRow(it)
                     val row = InlineKeyboardButton().apply {
-                        val callbackData = UnsubscribeItem(subscriptionId = subscriptionId)
+                        val callbackData = UnsubscribeItem(id = subscriptionId)
                         this.text = item.name
                         this.callbackData = objectMapper.toJson(callbackData)
                     }
@@ -54,7 +54,7 @@ class KeyboardProvider(private val objectMapper: ObjectMapper) {
     fun asButtons(itemId: Long, sizes: List<SizeInfo>): InlineKeyboardMarkup {
         val buttons = sizes.map {
             val row = InlineKeyboardButton().apply {
-                val callbackData = SubscriptionForSize(sizeName = it.name, itemId = itemId)
+                val callbackData = SubscriptionForSize(size = it.name, id = itemId)
                 this.text = it.name
                 this.callbackData = objectMapper.toJson(callbackData)
             }

@@ -32,12 +32,12 @@ class CallbackHandler(
     private fun handleVariationSubscription(update: Update, request: SubscriptionForSize): String {
         val sizesText = transaction {
             ItemSubscription.findByItemAndUser(
-                itemId = request.itemId,
+                itemId = request.id,
                 userId = update.callbackQuery.from.id
             ).apply {
                 val sizes = this.metadata?.sizes ?: listOf()
-                if (sizes.contains(request.sizeName).not()) {
-                    this.metadata = SubscriptionMetadata(sizes = sizes + request.sizeName)
+                if (sizes.contains(request.size).not()) {
+                    this.metadata = SubscriptionMetadata(sizes = sizes + request.size)
                 }
             }.metadata.nonNull().sizes ?: listOf()
         }.sorted().joinToString("\n")
@@ -46,7 +46,7 @@ class CallbackHandler(
 
     private fun unsubscribeItem(callback: UnsubscribeItem): String {
         return try {
-            transaction { itemService.removeSubscriptionById(callback.subscriptionId) }
+            transaction { itemService.removeSubscriptionById(callback.id) }
             CommandHandler.SUCCESS_COMMAND_REPLY
         } catch (e: EmptyResultDataAccessException) {
             CommandHandler.BAD_COMMAND_REPLY
