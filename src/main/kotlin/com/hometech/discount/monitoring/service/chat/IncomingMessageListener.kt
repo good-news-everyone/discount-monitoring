@@ -4,6 +4,7 @@ import com.hometech.discount.monitoring.configuration.ApplicationProperties
 import com.hometech.discount.monitoring.domain.exposed.entity.Message
 import com.hometech.discount.monitoring.domain.exposed.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.exposed.entity.User
+import com.hometech.discount.monitoring.service.ItemService
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.transactions.transaction

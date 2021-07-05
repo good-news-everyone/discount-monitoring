@@ -4,6 +4,7 @@ import com.hometech.discount.monitoring.domain.exposed.entity.Item
 import com.hometech.discount.monitoring.domain.exposed.entity.User
 import com.hometech.discount.monitoring.domain.model.CommandHandlingData
 import com.hometech.discount.monitoring.parser.ParserType
+import com.hometech.discount.monitoring.service.ItemService
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.stereotype.Component
