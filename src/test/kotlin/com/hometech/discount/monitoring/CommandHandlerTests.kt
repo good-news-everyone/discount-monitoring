@@ -13,8 +13,8 @@ import com.hometech.discount.monitoring.helper.randomItem
 import com.hometech.discount.monitoring.helper.randomLong
 import com.hometech.discount.monitoring.helper.randomString
 import com.hometech.discount.monitoring.parser.ParserType
-import com.hometech.discount.monitoring.service.CommandHandler
-import com.hometech.discount.monitoring.service.CommandHandler.Companion.SUCCESS_COMMAND_REPLY
+import com.hometech.discount.monitoring.service.chat.CommandHandler
+import com.hometech.discount.monitoring.service.chat.CommandHandler.Companion.SUCCESS_COMMAND_REPLY
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.ObsoleteCoroutinesApi
