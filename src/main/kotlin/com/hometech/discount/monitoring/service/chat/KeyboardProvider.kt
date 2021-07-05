@@ -51,6 +51,19 @@ class KeyboardProvider(private val objectMapper: ObjectMapper) {
         }
     }
 
+    fun itemsToUrlButtons(items: List<Item>): InlineKeyboardMarkup {
+        val buttons = items.map {
+            val row = InlineKeyboardButton().apply {
+                this.text = it.name
+                this.url = it.url
+            }
+            listOf(row)
+        }
+        return InlineKeyboardMarkup().apply {
+            this.keyboard = buttons
+        }
+    }
+
     fun asButtons(itemId: Long, sizes: List<SizeInfo>): InlineKeyboardMarkup {
         val buttons = sizes.map {
             val row = InlineKeyboardButton().apply {

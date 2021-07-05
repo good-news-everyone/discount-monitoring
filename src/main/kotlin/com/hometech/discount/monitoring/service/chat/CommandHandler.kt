@@ -23,7 +23,11 @@ class CommandHandler(
         return when (args[0].lowercase()) {
             HELP_COMMAND, START_COMMAND -> CommandHandlingData(welcomeMessage)
             SHOPS_COMMAND -> CommandHandlingData(allShops())
-            GOODS_COMMAND -> CommandHandlingData(goods(update.userId()))
+            GOODS_COMMAND -> {
+                val items = goods(update.userId())
+                val text = if (items.isEmpty()) GOODS_EMPTY_COMMAND_REPLY else GOODS_FOUND_COMMAND_REPLY
+                CommandHandlingData(text, keyboardProvider.itemsToUrlButtons(items))
+            }
             UNSUBSCRIBE_ALL_COMMAND -> CommandHandlingData(unsubscribeAll(update.userId()))
             UNSUBSCRIBE_COMMAND -> CommandHandlingData(UNSUBSCRIBE_COMMAND_REPLY, keyboardProvider.userItems(userId = update.userId()))
             else -> CommandHandlingData(BAD_COMMAND_REPLY, keyboardProvider.baseCommands)
@@ -34,9 +38,9 @@ class CommandHandler(
         return ParserType.allShops.joinToString(separator = "\n")
     }
 
-    private fun goods(userId: Long): String {
+    private fun goods(userId: Long): List<Item> {
         return transaction {
-            User.findById(userId)?.items?.joinToString(separator = "\n") { it.asString() } ?: ""
+            User.findById(userId)?.items?.toList() ?: listOf()
         }
     }
     private fun unsubscribeAll(userId: Long): String {
@@ -44,7 +48,6 @@ class CommandHandler(
         return SUCCESS_COMMAND_REPLY
     }
 
-    private fun Item.asString(): String = "\uD83D\uDCB8 ${this.name}, ${this.url}"
     private fun Update.userId(): Long = this.message.from.id
 
     companion object {
@@ -64,6 +67,8 @@ class CommandHandler(
 
         const val BAD_COMMAND_REPLY = "Команда не точная 💩"
         const val SUCCESS_COMMAND_REPLY = "Успешно!"
+        const val GOODS_EMPTY_COMMAND_REPLY = "У вас пока нет товаров."
+        const val GOODS_FOUND_COMMAND_REPLY = "Вот какие товары мы нашли по вашему запросу:"
         const val UNSUBSCRIBE_COMMAND_REPLY = "Выберете товар, от которого хотели бы отписаться (действие не может быть отменено, будьте внимательны):"
     }
 

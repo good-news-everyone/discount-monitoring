@@ -14,9 +14,9 @@ import com.hometech.discount.monitoring.helper.randomLong
 import com.hometech.discount.monitoring.helper.randomString
 import com.hometech.discount.monitoring.parser.ParserType
 import com.hometech.discount.monitoring.service.chat.CommandHandler
+import com.hometech.discount.monitoring.service.chat.CommandHandler.Companion.GOODS_FOUND_COMMAND_REPLY
 import com.hometech.discount.monitoring.service.chat.CommandHandler.Companion.SUCCESS_COMMAND_REPLY
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -77,8 +77,7 @@ class CommandHandlerTests : BaseIntegrationTest() {
 
         val goods = commandHandler.handleCommand(update)
 
-        goods.message.shouldContain(item.name)
-        goods.message.shouldContain(item.url)
+        goods.message shouldBe GOODS_FOUND_COMMAND_REPLY
     }
 
     @Test
