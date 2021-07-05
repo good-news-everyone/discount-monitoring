@@ -95,14 +95,26 @@ class NotifyService(
     }
 
     fun sendMessageToAllUsers(message: String) {
-        transaction { User.findAll().forEach { sendMessage(it, message) } }
+        transaction {
+            User.findAll().forEach {
+                try {
+                    sendMessage(it, message)
+                } catch (ex: HttpClientErrorException) {
+                    if (ex.statusCode == HttpStatus.FORBIDDEN) setBlockedBy(it)
+                }
+            }
+        }
     }
 
     fun sendMessageToUser(userId: Int, message: String) {
-        val user = transaction {
-            User.findById(userId.toLong()) ?: throw NoSuchElementException("User with id = $userId not found")
+        transaction {
+            val user = User.findById(userId.toLong()) ?: throw NoSuchElementException("User with id = $userId not found")
+            try {
+                sendMessage(user, message)
+            } catch (ex: HttpClientErrorException) {
+                if (ex.statusCode == HttpStatus.FORBIDDEN) setBlockedBy(user)
+            }
         }
-        sendMessage(user, message)
     }
 
     fun setBlockedBy(user: User) {
