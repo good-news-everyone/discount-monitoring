@@ -71,7 +71,6 @@ class CommandHandler(
         const val GOODS_FOUND_COMMAND_REPLY = "Вот какие товары мы нашли по вашему запросу:"
         const val UNSUBSCRIBE_COMMAND_REPLY = "Выберете товар, от которого хотели бы отписаться (действие не может быть отменено, будьте внимательны):"
     }
-
 }
 
 const val START_COMMAND = "/start"

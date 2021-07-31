@@ -3,6 +3,7 @@ package com.hometech.discount.monitoring
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.parser.ProxyDictionary
 import com.hometech.discount.monitoring.parser.impl.HmParser
+import com.hometech.discount.monitoring.parser.impl.MangoParser
 import com.hometech.discount.monitoring.parser.impl.OzonParser
 import com.hometech.discount.monitoring.parser.impl.ZaraParser
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -19,6 +20,9 @@ class IntegrationTests : BaseIntegrationTest() {
 
     @Autowired
     lateinit var ozonParser: OzonParser
+
+    @Autowired
+    lateinit var mangoParser: MangoParser
 
     @Autowired
     lateinit var proxyParser: ProxyDictionary
@@ -46,6 +50,12 @@ class IntegrationTests : BaseIntegrationTest() {
     }
 
     @Test
+    fun checkMangoAvailability() {
+        val item = mangoParser.getItemInfo("https://shop.mango.com/ru/женская/купальники-бикини/бюстгальтер-от-бикини-с-цветочным-принтом_87066316.html?c=99&utm_source=product-share&utm_medium=app-IOS")
+        assertionsOf(item)
+    }
+
+//    @Test
     fun checkProxyParser() {
         proxyParser.checkProxyList()
         proxyParser.random()
