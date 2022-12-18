@@ -76,9 +76,8 @@ class IncomingMessageListener(
                 replyMarkup = item.additionalInfo.sizes?.let { keyboardProvider.asButtons(item.id.value, it) }
             )
         } catch (e: Exception) {
-            logger.error {
-                reply(chatId = chatId, message = SOMETHING_WRONG_MESSAGE)
-            }
+            logger.error(e) { }
+            reply(chatId = chatId, message = SOMETHING_WRONG_MESSAGE)
         }
     }
 
