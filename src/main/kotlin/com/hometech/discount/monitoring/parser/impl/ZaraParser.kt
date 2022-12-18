@@ -11,6 +11,7 @@ import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.SizeInfo
 import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
+import mu.KotlinLogging
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -25,6 +26,7 @@ private val objectMapper: ObjectMapper = jacksonObjectMapper().apply {
     findAndRegisterModules()
     disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 }
+private val logger = KotlinLogging.logger {}
 
 @Component
 class ZaraParser : Parser {
@@ -33,7 +35,22 @@ class ZaraParser : Parser {
 
     override fun getItemInfo(url: String): ItemInfo {
         val document = try {
-            Jsoup.connect(url).get()
+            Jsoup
+                .connect(url)
+                .followRedirects(true)
+                .ignoreHttpErrors(true)
+                .execute()
+                .also {
+                    logger.trace {
+                        """
+                        Url: $url
+                        ${it.statusCode()} : ${it.statusMessage()}
+                        Raw response: ${it.body()}
+                        """.trimIndent()
+                    }
+                    logger.trace { it.body() }
+                }
+                .parse()
         } catch (e: HttpStatusException) {
             throw OutdatedItemException(url, e)
         }
