@@ -35,7 +35,7 @@ class ZaraParser : Parser {
         val document = try {
             Jsoup.connect(url).get()
         } catch (e: HttpStatusException) {
-            throw OutdatedItemException(url)
+            throw OutdatedItemException(url, e)
         }
         val productInfo = document.toProductInfo()
         return ItemInfo(
