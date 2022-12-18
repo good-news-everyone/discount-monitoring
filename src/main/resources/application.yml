@@ -13,6 +13,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     validate-on-migrate: true
+  main:
+    allow-circular-references: true
 logging:
   level:
     com.hometech: ${LOG_LEVEL:trace}

@@ -7,7 +7,8 @@ import org.springframework.boot.context.properties.ConstructorBinding
 @ConstructorBinding
 data class ApplicationProperties(
     val bot: BotProperties = BotProperties(),
-    val threadsCount: Int
+    val threadsCount: Int,
+    val baseUrl: String = "https://api.telegram.org"
 )
 
 @ConstructorBinding

@@ -8,9 +8,9 @@ import com.hometech.discount.monitoring.domain.exposed.entity.ItemTable
 import com.hometech.discount.monitoring.domain.exposed.entity.User
 import com.hometech.discount.monitoring.domain.exposed.extensions.lowerCaseText
 import com.hometech.discount.monitoring.parser.ParserType
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mu.KotlinLogging
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -20,6 +20,7 @@ import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 
+@OptIn(DelicateCoroutinesApi::class)
 @ObsoleteCoroutinesApi
 @Service
 class ItemService(

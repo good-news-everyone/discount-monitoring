@@ -1,7 +1,7 @@
 package com.hometech.discount.monitoring.domain.exposed.entity
 
-import com.hometech.discount.monitoring.domain.entity.exposed.enum
 import com.hometech.discount.monitoring.domain.exposed.extensions.NamedEntityClass
+import com.hometech.discount.monitoring.domain.exposed.extensions.enum
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.LongIdTable

@@ -8,8 +8,11 @@ val telegramBotsVersion: String by project
 val jsoupVersion: String by project
 val mockkVersion: String by project
 val exposedVersion: String by project
+val jacocoVersion: String by project
 
 plugins {
+    jacoco
+
     id("org.springframework.boot")
     id("io.spring.dependency-management")
     id("io.gitlab.arturbosch.detekt")
@@ -41,13 +44,13 @@ tasks {
     }
     compileKotlin {
         kotlinOptions {
-            freeCompilerArgs = listOf("-Xjsr305=strict")
+            freeCompilerArgs = listOf("-Xjsr305=strict", "-opt-in=kotlin.RequiresOptIn")
             jvmTarget = "11"
         }
     }
     compileTestKotlin {
         kotlinOptions {
-            freeCompilerArgs = listOf("-Xjsr305=strict")
+            freeCompilerArgs = listOf("-Xjsr305=strict", "-opt-in=kotlin.RequiresOptIn")
             jvmTarget = "11"
         }
     }
@@ -58,13 +61,30 @@ tasks {
             showStandardStreams = true
             setExceptionFormat("full")
         }
+        setFinalizedBy(setOf(jacocoTestReport))
+    }
+    jacocoTestReport {
+        classDirectories.setFrom(
+            sourceSets.main.get().output.asFileTree.matching {
+                val excludes = listOf(
+                    "com/hometech/**/configuration/**",
+                    "com/hometech/**/*Application.kt",
+                    "com/hometech/**/extensions/**"
+                )
+                this.exclude(excludes)
+            }
+        )
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
+        dependsOn(test)
     }
 }
 
 repositories {
     mavenCentral()
     mavenLocal()
-    jcenter()
 }
 
 dependencies {
@@ -94,10 +114,15 @@ dependencies {
     testImplementation("com.ninja-squad:springmockk:$mockkVersion")
     testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
+    testImplementation("org.springframework.cloud:spring-cloud-contract-wiremock")
 }
 
 dependencyManagement {
     imports {
         mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
     }
+}
+
+jacoco {
+    toolVersion = jacocoVersion
 }

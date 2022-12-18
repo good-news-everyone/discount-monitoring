@@ -6,7 +6,6 @@ import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.Expression
 import org.jetbrains.exposed.sql.Function
 import org.jetbrains.exposed.sql.QueryBuilder
-import org.jetbrains.exposed.sql.SizedIterable
 import org.jetbrains.exposed.sql.TextColumnType
 import org.jetbrains.exposed.sql.append
 
@@ -20,15 +19,6 @@ class LowerCaseText<T : String?>(
     val expr: Expression<T>
 ) : Function<T>(TextColumnType()) {
     override fun toQueryBuilder(queryBuilder: QueryBuilder): Unit = queryBuilder { append("LOWER(", expr, ")") }
-}
-
-fun <E : LongEntity> NamedEntityClass<E>.findOrException(ids: Iterable<Long>): SizedIterable<E> {
-    val foundEntities = find { table.id.inList(ids) }
-    if (foundEntities.count() != ids.count().toLong()) {
-        val notFoundIds = ids - foundEntities.map { it.id.value }
-        throw RuntimeException("Для элемента '$name' не найдены ID '$notFoundIds'")
-    }
-    return foundEntities
 }
 
 fun <E : LongEntity> NamedEntityClass<E>.findOrException(id: Long): E {

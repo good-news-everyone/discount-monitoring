@@ -35,7 +35,7 @@ fun randomItem(
         this.highestPrice = price
         this.lowestPrice = price
         this.initialPrice = price
-        this.priceCurrency = randomString()
+        this.priceCurrency = "RUB"
         this.additionalInfo = additionalInfo
         this.timeAdded = LocalDateTime.now()
     }
@@ -45,7 +45,7 @@ fun randomUser(): User {
     return User.new(randomInt().absoluteValue.toLong()) {
         this.chatId = randomLong()
         this.isBot = false
-        this.isBlockedBy = true
+        this.isBlockedBy = false
         this.firstName = randomString()
         this.lastName = randomString()
         this.userName = randomString()

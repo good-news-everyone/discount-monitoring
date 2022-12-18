@@ -8,6 +8,7 @@ import com.hometech.discount.monitoring.domain.exposed.entity.Message
 import com.hometech.discount.monitoring.domain.exposed.entity.MessageDirection
 import com.hometech.discount.monitoring.domain.exposed.entity.PriceChange
 import com.hometech.discount.monitoring.domain.exposed.entity.User
+import com.hometech.discount.monitoring.domain.exposed.extensions.findOrException
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.MessageBody
 import com.hometech.discount.monitoring.domain.model.PriceLogView
@@ -43,7 +44,7 @@ class NotifyService(
     private lateinit var itemService: ItemService
 
     private val log = KotlinLogging.logger { }
-    private val uri = "https://api.telegram.org/bot${applicationProperties.bot.token}/sendMessage"
+    private val uri = "${applicationProperties.baseUrl}/bot${applicationProperties.bot.token}/sendMessage"
 
     @Async
     fun notifyUsers(notifyingItems: List<ItemChangeWrapper>) {
@@ -108,7 +109,7 @@ class NotifyService(
 
     fun sendMessageToUser(userId: Int, message: String) {
         transaction {
-            val user = User.findById(userId.toLong()) ?: throw NoSuchElementException("User with id = $userId not found")
+            val user = User.findOrException(userId.toLong())
             try {
                 sendMessage(user, message)
             } catch (ex: HttpClientErrorException) {
@@ -175,4 +176,4 @@ class NotifyService(
     }
 }
 
-private const val ITEM_NOT_AVAILABLE_MESSAGE = "Товар более не доступен в магазине. Все уведомления по нему будут отключены."
+internal const val ITEM_NOT_AVAILABLE_MESSAGE = "Товар более не доступен в магазине. Все уведомления по нему будут отключены."

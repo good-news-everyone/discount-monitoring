@@ -1,6 +1,14 @@
 package com.hometech.discount.monitoring.parser.impl
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS
+import com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES
+import com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES
+import com.fasterxml.jackson.core.json.JsonReadFeature
+import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.hometech.discount.monitoring.common.nonNull
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.SizeInfo
@@ -11,8 +19,15 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
 
+private val objectMapper = jacksonObjectMapper().apply {
+    findAndRegisterModules()
+    configure(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature(), true)
+    enable(ALLOW_UNQUOTED_FIELD_NAMES, ALLOW_COMMENTS, ALLOW_SINGLE_QUOTES)
+    disable(FAIL_ON_UNKNOWN_PROPERTIES)
+}
+
 @Component
-class HmParser(private val objectMapper: ObjectMapper) : Parser {
+class HmParser : Parser {
 
     override fun getType(): ParserType = ParserType.HM_HOME
 
@@ -31,41 +46,40 @@ class HmParser(private val objectMapper: ObjectMapper) : Parser {
 
     private fun Document?.toProductInfo(): Product {
         if (this == null) throw RuntimeException("Empty result")
-        val data = this.getElementById("product-schema")?.data()
-        requireNotNull(data)
-        return objectMapper.readValue(data, Product::class.java)
+        return getElementById("product-schema")?.data()
+            .nonNull()
+            .let { objectMapper.readValue(it) }
     }
 
     private fun Document?.productId(): String {
         if (this == null) throw RuntimeException("Empty result")
-        val data = this.getElementsByTag("script").first {
-            it.data().contains("trackAddToCart")
-        }.data()
-        return data.split("\n").first {
-            it.trim().startsWith("product_id")
-        }.split("'").drop(1).first()
+        // parse js injection
+        return getElementsByTag("script")
+            .first { it.data().contains("trackAddToCart") }
+            .data()
+            .lines()
+            .first { it.trim().startsWith("product_id") }
+            .split("'")
+            .drop(1)
+            .first()
     }
 
     private fun Document?.findSizes(sku: String): List<SizeCodeInfo> {
         if (this == null) throw RuntimeException("Empty result")
-        val data = this.getElementsByTag("script").first {
-            it.data().contains("productArticleDetails")
-        }.data()
-        val strings = data.split("\n").dropWhile { it.trim().startsWith("var productArticleDetails").not() }
+        // parse js injection
+        val jsonString = getElementsByTag("script")
+            .first { it.data().contains("productArticleDetails") }
+            .data()
+            .lines().dropWhile { it.trim().startsWith("var productArticleDetails").not() }
             .drop(1)
+            .filter { !it.contains("isDesktop") }
             .toMutableList()
-        strings.add(0, "{")
-        val jsonString = strings.joinToString(separator = "\n") {
-            it.trim()
-                .replace("'", "\"")
-                .replace(Regex("isDesktop.* \".*\""), "\"\"")
-        }
-            .replace("}\n,\n{", "},\n{")
-        val skuInfo = objectMapper.readValue(jsonString, HashMap::class.java)[sku] as Map<String, Any>
-        return (skuInfo["sizes"] as List<Map<String, Any>>).map {
+            .apply { add(0, "{") }
+            .joinToString(separator = "\n")
+        return (objectMapper.readTree(jsonString)[sku]["sizes"] as ArrayNode).map {
             SizeCodeInfo(
-                code = it["sizeCode"] as String,
-                name = it["name"] as String
+                code = it["sizeCode"].textValue(),
+                name = it["name"].textValue()
             )
         }
     }
@@ -77,7 +91,9 @@ class HmParser(private val objectMapper: ObjectMapper) : Parser {
             .ignoreContentType(true)
             .execute()
             .body() ?: throw RuntimeException("Empty result")
-        val availability = objectMapper.readValue(sizesResponse, AvailableSizesResponse::class.java).availability
+        val availability = objectMapper
+            .readValue<AvailableSizesResponse>(sizesResponse)
+            .availability
         return sizes.map {
             SizeInfo(
                 name = it.name,

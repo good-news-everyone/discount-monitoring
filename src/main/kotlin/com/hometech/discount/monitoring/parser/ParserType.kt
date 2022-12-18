@@ -5,7 +5,6 @@ import java.net.URI
 enum class ParserType(val baseUrl: String) {
     HM_HOME("www2.hm.com"),
     ZARA("www.zara.com"),
-    OZON("www.ozon.ru"),
     MANGO("shop.mango.com");
 
     companion object {

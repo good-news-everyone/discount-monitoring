@@ -1,10 +1,9 @@
 package com.hometech.discount.monitoring.domain.exposed.entity
 
-import com.hometech.discount.monitoring.domain.entity.exposed.enum
-import com.hometech.discount.monitoring.domain.exposed.extensions.jsonb
 import com.hometech.discount.monitoring.domain.exposed.extensions.NamedEntityClass
+import com.hometech.discount.monitoring.domain.exposed.extensions.enum
+import com.hometech.discount.monitoring.domain.exposed.extensions.jsonb
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
-import com.hometech.discount.monitoring.domain.model.SizeInfo
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.LongIdTable
@@ -25,26 +24,6 @@ class AdditionalInfoLog(id: EntityID<Long>) : LongEntity(id) {
     var timeChecked by AdditionalInfoLogTable.timeChecked
     var infoBefore by AdditionalInfoLogTable.infoBefore
     var infoNow by AdditionalInfoLogTable.infoNow
-
-    fun difference(): String {
-        return if (infoBefore.sizes != null || infoNow.sizes != null) {
-            val sizesBefore = infoBefore.sizes?.associateBy { it.name } ?: mapOf()
-            val sizesNow = infoNow.sizes?.associateBy { it.name } ?: mapOf()
-            sizesNow.entries.mapNotNull {
-                if (it.value.availability != sizesBefore[it.key]?.availability) {
-                    it.value.availabilityMessage()
-                } else null
-            }.joinToString(separator = "\n")
-        } else ""
-    }
-
-    private fun SizeInfo.availabilityMessage(): String {
-        return if (this.availability)
-            "Размер ${this.name} появился в наличии!"
-        else "Размера ${this.name} больше нет в наличии!"
-    }
-
-    fun hasChanges(): Boolean = infoBefore != infoNow
 }
 
 object PriceChangeLogTable : LongIdTable("price_changelog") {
@@ -63,8 +42,6 @@ class PriceChangeLog(id: EntityID<Long>) : LongEntity(id) {
     var priceChange by PriceChangeLogTable.priceChange
     var priceBefore by PriceChangeLogTable.priceBefore
     var priceNow by PriceChangeLogTable.priceNow
-
-    fun hasChanges() = priceChange != PriceChange.NONE
 }
 
 enum class PriceChange(val literal: String) {

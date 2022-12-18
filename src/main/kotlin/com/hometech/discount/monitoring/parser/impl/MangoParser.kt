@@ -1,6 +1,9 @@
 package com.hometech.discount.monitoring.parser.impl
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.SizeInfo
@@ -11,8 +14,13 @@ import org.jsoup.nodes.Document
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
 
+private val objectMapper: ObjectMapper = jacksonObjectMapper().apply {
+    findAndRegisterModules()
+    disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+}
+
 @Component
-class MangoParser(private val objectMapper: ObjectMapper) : Parser {
+class MangoParser : Parser {
 
     private val titleRegex = Regex("\\s\\|.*")
     private val utmRegex = Regex("\\.html.*")
@@ -37,7 +45,7 @@ class MangoParser(private val objectMapper: ObjectMapper) : Parser {
         if (this == null) throw RuntimeException("Empty result")
         val data = this.getElementsByTag("script").first { it.data().contains("originalPrice") }.data()
         val json = "{" + data.substringAfter("{").substringBeforeLast("}") + "}"
-        return objectMapper.readValue(json, TopLevelProduct::class.java)
+        return objectMapper.readValue(json)
     }
 
     private data class TopLevelProduct(
@@ -64,7 +72,7 @@ class MangoParser(private val objectMapper: ObjectMapper) : Parser {
 
         private fun String?.toSizeInfos(isAvailable: Boolean): List<SizeInfo> {
             if (this == null || this == NO_SIZES) return emptyList()
-            return this.split(",").map { SizeInfo(it, isAvailable) }
+            return split(",").map { SizeInfo(it, isAvailable) }
         }
     }
 

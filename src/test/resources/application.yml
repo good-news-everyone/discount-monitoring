@@ -7,6 +7,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     validate-on-migrate: true
+  main:
+    allow-circular-references: true
 logging:
   level:
     com.hometech: TRACE
@@ -16,3 +18,4 @@ app:
     name: ${BOT_NAME:not-valid}
     token: ${BOT_TOKEN:not-valid}
   threads-count: ${THREADS_COUNT:1}
+  base-url: http://localhost:${wiremock.server.port}

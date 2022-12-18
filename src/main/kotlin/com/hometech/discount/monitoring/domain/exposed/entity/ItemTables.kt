@@ -1,8 +1,8 @@
 package com.hometech.discount.monitoring.domain.exposed.entity
 
-import com.hometech.discount.monitoring.domain.entity.exposed.enum
-import com.hometech.discount.monitoring.domain.exposed.extensions.jsonb
 import com.hometech.discount.monitoring.domain.exposed.extensions.NamedEntityClass
+import com.hometech.discount.monitoring.domain.exposed.extensions.enum
+import com.hometech.discount.monitoring.domain.exposed.extensions.jsonb
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
 import com.hometech.discount.monitoring.parser.ParserType
 import org.jetbrains.exposed.dao.LongEntity

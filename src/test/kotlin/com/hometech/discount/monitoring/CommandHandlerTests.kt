@@ -67,12 +67,12 @@ class CommandHandlerTests : BaseIntegrationTest() {
 
     @Test
     fun `should return items`() {
-        val (item, update) = transaction {
+        val update = transaction {
             val item = randomItem()
             val update = createUpdate("/goods")
             val user = update.message.getUser()
             createRelations(user, item)
-            Pair(item, update)
+            update
         }
 
         val goods = commandHandler.handleCommand(update)

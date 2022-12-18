@@ -1,6 +1,9 @@
 package com.hometech.discount.monitoring.parser.impl
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.hometech.discount.monitoring.common.nonNull
 import com.hometech.discount.monitoring.domain.OutdatedItemException
 import com.hometech.discount.monitoring.domain.model.AdditionalInfo
@@ -8,8 +11,6 @@ import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.SizeInfo
 import com.hometech.discount.monitoring.parser.Parser
 import com.hometech.discount.monitoring.parser.ParserType
-import com.hometech.discount.monitoring.parser.ProxyDictionary
-import mu.KotlinLogging
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -17,12 +18,16 @@ import org.springframework.stereotype.Component
 import java.math.BigDecimal
 import java.math.RoundingMode
 
+private const val SIZES_INFO_MARKER = "window.zara.appConfig"
+private const val PRODUCT_INFO_MARKER = "window.zara.viewPayload = "
+
+private val objectMapper: ObjectMapper = jacksonObjectMapper().apply {
+    findAndRegisterModules()
+    disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+}
+
 @Component
-class ZaraParser(
-    private val objectMapper: ObjectMapper,
-    private val proxyDictionary: ProxyDictionary
-) : Parser {
-    private val log = KotlinLogging.logger {}
+class ZaraParser : Parser {
 
     override fun getType(): ParserType = ParserType.ZARA
 
@@ -44,30 +49,12 @@ class ZaraParser(
 
     private fun Document?.toProductInfo(): ProductParseData {
         if (this == null) throw RuntimeException("Empty result")
-        val info = this.getElementsByAttributeValue("type", "text/javascript").first {
+        val info = getElementsByAttributeValue("type", "text/javascript").first {
             it.data().trim().startsWith(SIZES_INFO_MARKER)
         }.data().substringAfter(PRODUCT_INFO_MARKER)
-        return objectMapper.readValue(info, ProductParseData::class.java).nonNull()
-    }
-
-    // до лучших времен
-    private fun getDocumentWithRetries(url: String): Document {
-        // 3 retries
-        (1..3).forEach {
-            val (host, port) = proxyDictionary.random()
-            try {
-                return Jsoup.connect(url).proxy(host, port).get()
-            } catch (ex: Exception) {
-                log.error { "${ex.javaClass} for proxy = $host:$port. Retry #$it for item $url" }
-            }
-        }
-        log.warn { "Retrieving item info without proxy" }
-        return Jsoup.connect(url).get()
+        return objectMapper.readValue<ProductParseData>(info).nonNull()
     }
 }
-
-private const val SIZES_INFO_MARKER = "window.zara.appConfig"
-private const val PRODUCT_INFO_MARKER = "window.zara.viewPayload = "
 
 private data class ProductParseData(
     val product: ProductInfo,

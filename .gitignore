@@ -9,5 +9,8 @@ build/
 detekt-report.html
 out/
 
+deploy/*env
+deploy/postgres-data
+
 .DS_Store
 **/charts/*.tgz

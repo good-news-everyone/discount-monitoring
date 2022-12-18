@@ -1,4 +1,4 @@
-package com.hometech.discount.monitoring.domain.entity.exposed
+package com.hometech.discount.monitoring.domain.exposed.extensions
 
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table

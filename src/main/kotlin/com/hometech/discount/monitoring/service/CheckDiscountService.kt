@@ -11,6 +11,7 @@ import com.hometech.discount.monitoring.domain.model.ChangeWrapper
 import com.hometech.discount.monitoring.domain.model.ItemChangeWrapper
 import com.hometech.discount.monitoring.domain.model.ItemInfo
 import com.hometech.discount.monitoring.domain.model.PriceLogView
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service
 import java.util.concurrent.TimeUnit
 
 @ObsoleteCoroutinesApi
+@OptIn(DelicateCoroutinesApi::class)
 @Service
 class CheckDiscountService(
     private val parserResolver: ParserResolver,

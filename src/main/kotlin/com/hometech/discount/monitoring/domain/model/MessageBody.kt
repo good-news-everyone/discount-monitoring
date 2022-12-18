@@ -8,9 +8,9 @@ data class MessageBody(
     val text: String
 ) {
     fun toMultivaluedMap(): MultiValueMap<String, String> {
-        val map: MultiValueMap<String, String> = LinkedMultiValueMap()
-        map.add("chat_id", chatId.toString())
-        map.add("text", text)
-        return map
+        return LinkedMultiValueMap<String, String>().apply {
+            add("chat_id", chatId.toString())
+            add("text", text)
+        }
     }
 }
